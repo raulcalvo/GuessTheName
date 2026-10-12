@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ranking · Cómo se llamará</title>
+<meta name="theme-color" content="#f7a8c4">
+<link rel="icon" href="../icons/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Pacifico&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/estilos.css">
+<style>
+  .ranking { list-style: none; padding: 0; margin: 0 0 8px; text-align: left; }
+  .ranking li {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; margin-bottom: 8px;
+    background: #fff; border-radius: 16px; border: 2px solid #f1e6f8;
+  }
+  .ranking li.podio-1 { border-color: #ffd36e; background: #fffaf0; }
+  .ranking li.podio-2 { border-color: #d6d9e0; }
+  .ranking li.podio-3 { border-color: #e8b98a; }
+  .posicion { min-width: 2.2em; font-weight: 700; font-size: 1.2rem; text-align: center; }
+  .quien { flex: 1; font-weight: 600; overflow-wrap: anywhere; }
+  .cuantos { font-weight: 700; color: var(--boton); white-space: nowrap; }
+  .pendientes li { opacity: 0.85; }
+  .pendientes .cuantos { color: var(--texto-suave); }
+  .vacio { color: var(--texto-suave); }
+  h2.seccion { font-size: 1.3rem; margin: 24px 0 12px; }
+  .volver { display: inline-block; margin-top: 16px; color: var(--boton); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <section class="pantalla activa">
+    <div class="globos" aria-hidden="true">🏆 👶 🏆</div>
+    <h1 id="titulo">Ranking</h1>
+    <p class="intro" id="intro"></p>
+    <p id="estado" class="vacio"></p>
+    <ol id="ganadores" class="ranking"></ol>
+    <h2 id="titulo-pendientes" class="seccion" hidden></h2>
+    <ul id="pendientes" class="ranking pendientes"></ul>
+    <a class="volver" id="volver" href="../">← </a>
+  </section>
+</main>
+
+<script src="../js/i18n.js"></script>
+<script type="module">
+  import { obtenerRanking } from "../js/almacen.js";
+
+  const TEXTOS = {
+    es: {
+      titulo: "Ranking de oráculos",
+      intro: "Quién ha adivinado el nombre con menos intentos. Los demás, abajo, siguen buscando la inspiración.",
+      cargando: "Consultando el marcador...",
+      nadie: "Todavía nadie lo ha adivinado. ¡El podio está libre!",
+      pendientes: "Siguen intentándolo",
+      intento: "1 intento", intentos: "{n} intentos",
+      sinNube: "El ranking no está disponible ahora mismo. Revisa la conexión y vuelve a probar.",
+      volver: "← Volver al juego"
+    },
+    ca: {
+      titulo: "Rànquing d'oracles",
+      intro: "Qui ha endevinat el nom amb menys intents. La resta, a sota, continuen buscant la inspiració.",
+      cargando: "Consultant el marcador...",
+      nadie: "Encara ningú l'ha endevinat. El podi és lliure!",
+      pendientes: "Continuen intentant-ho",
+      intento: "1 intent", intentos: "{n} intents",
+      sinNube: "El rànquing no està disponible ara mateix. Revisa la connexió i torna-ho a provar.",
+      volver: "← Torna al joc"
+    },
+    en: {
+      titulo: "Oracle leaderboard",
+      intro: "Who guessed the name in the fewest attempts. Everyone else, below, is still looking for inspiration.",
+      cargando: "Checking the scoreboard...",
+      nadie: "Nobody has guessed it yet. The podium is up for grabs!",
+      pendientes: "Still trying",
+      intento: "1 attempt", intentos: "{n} attempts",
+      sinNube: "The leaderboard isn't available right now. Check your connection and try again.",
+      volver: "← Back to the game"
+    }
+  };
+
+  const idioma = detectarIdioma();
+  const T = TEXTOS[idioma] || TEXTOS.es;
+  document.documentElement.lang = idioma;
+  document.title = T.titulo;
+  const $ = (id) => document.getElementById(id);
+  $("titulo").textContent = T.titulo;
+  $("intro").textContent = T.intro;
+  $("volver").textContent = T.volver;
+  $("estado").textContent = T.cargando;
+
+  const medallas = ["🥇", "🥈", "🥉"];
+  const veces = (n) => (n === 1 ? T.intento : T.intentos.replace("{n}", n));
+
+  function fila(lista, posicion, nombre, n) {
+    const li = document.createElement("li");
+    if (posicion && posicion <= 3) li.className = "podio-" + posicion;
+    const pos = document.createElement("span");
+    pos.className = "posicion";
+    pos.textContent = posicion ? (medallas[posicion - 1] || posicion + "º") : "·";
+    const quien = document.createElement("span");
+    quien.className = "quien";
+    quien.textContent = nombre;
+    const cuantos = document.createElement("span");
+    cuantos.className = "cuantos";
+    cuantos.textContent = veces(n);
+    li.append(pos, quien, cuantos);
+    lista.append(li);
+  }
+
+  try {
+    const r = await obtenerRanking();
+    if (!r) throw new Error("sin nube");
+    $("estado").textContent = r.ganadores.length ? "" : T.nadie;
+    // Empates: misma posición para el mismo número de intentos.
+    let posicion = 0, anterior = null;
+    r.ganadores.forEach((j, i) => {
+      const n = j.acertadoEn || j.intentos;
+      if (n !== anterior) { posicion = i + 1; anterior = n; }
+      fila($("ganadores"), posicion, j.nombre, n);
+    });
+    if (r.pendientes.length) {
+      $("titulo-pendientes").hidden = false;
+      $("titulo-pendientes").textContent = T.pendientes;
+      r.pendientes.forEach((j) => fila($("pendientes"), null, j.nombre, j.intentos));
+    }
+  } catch (e) {
+    console.error(e);
+    $("estado").textContent = T.sinNube;
+  }
+</script>
+</body>
+</html>

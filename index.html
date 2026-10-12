@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>¿Cómo se llamará?</title>
+<meta name="description" content="El gran juego para adivinar el nombre del bebé que viene en camino.">
+<meta name="theme-color" content="#f7a8c4">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cómo se llamará">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Pacifico&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+<canvas id="confeti" aria-hidden="true"></canvas>
+
+<nav class="idiomas" aria-label="Idioma / Language">
+  <button type="button" data-idioma="es" lang="es">ES</button>
+  <button type="button" data-idioma="ca" lang="ca">CA</button>
+  <button type="button" data-idioma="en" lang="en">EN</button>
+</nav>
+
+<main>
+  <!-- Pantalla 0: quién juega -->
+  <section id="pantalla-jugador" class="pantalla activa">
+    <div class="globos" aria-hidden="true">🍼 👶 🧸</div>
+    <h1><span data-i18n="titulo1">El Gran Misterio</span><br><span class="sub" data-i18n="titulo2">de la Criatura</span></h1>
+    <p class="intro" data-i18n="intro1"></p>
+    <h2 data-i18n="jugadorTitulo">¿Quién eres?</h2>
+    <p class="intro" data-i18n="jugadorIntro"></p>
+    <form id="formulario-jugador" autocomplete="on">
+      <label for="jugador" class="oculto" data-i18n="jugadorEtiqueta">Tu nombre</label>
+      <input id="jugador" name="jugador" type="text" maxlength="60" autocomplete="name"
+             autocapitalize="words" spellcheck="false" enterkeyhint="go" required>
+      <button type="submit" id="boton-jugador" data-i18n="jugadorEntrar">¡A jugar!</button>
+    </form>
+    <p id="aviso-jugador" class="aviso" role="alert"></p>
+  </section>
+
+  <!-- Pantalla 1: adivinar -->
+  <section id="pantalla-juego" class="pantalla">
+    <p class="jugando-como"><span id="jugando-como"></span> <button type="button" id="boton-no-soy-yo" class="enlace" data-i18n="noSoyYo">¿No eres tú?</button></p>
+    <div class="globos" aria-hidden="true">🍼 👶 🧸</div>
+    <h1><span data-i18n="titulo1">El Gran Misterio</span><br><span class="sub" data-i18n="titulo2">de la Criatura</span></h1>
+    <p class="intro" data-i18n-html="intro2"></p>
+    <form id="formulario" autocomplete="off">
+      <label for="nombre" class="oculto" data-i18n="etiquetaNombre">Nombre</label>
+      <input id="nombre" name="nombre" type="text" maxlength="40"
+             autocapitalize="words" spellcheck="false" enterkeyhint="go" required>
+      <button type="submit" id="boton-adivinar" data-i18n="adivinar">¡Adivinar!</button>
+    </form>
+    <p id="contador" class="contador"></p>
+  </section>
+
+  <!-- Pantalla 2: fallo -->
+  <section id="pantalla-fallo" class="pantalla" aria-live="polite">
+    <div class="emoji-grande" aria-hidden="true">🙈</div>
+    <h2 id="titulo-fallo">¡Nooo!</h2>
+    <p id="texto-fallo" class="mensaje"></p>
+    <button type="button" id="boton-reintentar" data-i18n="reintentar">Volver a intentarlo</button>
+  </section>
+
+  <!-- Pantalla 3: acierto -->
+  <section id="pantalla-acierto" class="pantalla" aria-live="polite">
+    <div class="emoji-grande" aria-hidden="true">🎉</div>
+    <h2 class="enhorabuena" data-i18n="enhorabuena">¡¡ENHORABUENA!!</h2>
+    <p class="mensaje" data-i18n="acierto"></p>
+    <p id="intentos-acierto" class="mensaje pequeno"></p>
+    <div class="aviso-secreto" role="note">
+      <div class="emoji-secreto" aria-hidden="true">🤫</div>
+      <p data-i18n="avisoSecretoTitulo">¡NI UNA PALABRA!</p>
+      <p data-i18n="avisoSecreto" class="pequeno"></p>
+    </div>
+    <button type="button" id="boton-continuar" data-i18n="continuar">Continuar</button>
+  </section>
+
+  <!-- Pantalla 4: la sorpresa -->
+  <section id="pantalla-sorpresa" class="pantalla">
+    <h2 data-i18n="presentamos">¡Os presentamos a...!</h2>
+    <img id="imagen-sorpresa" alt="">
+    <p class="mensaje pequeno" data-i18n="secreto">Ahora, por favor, guarda el secreto. 🤫</p>
+    <button type="button" id="boton-otra-vez" class="secundario" data-i18n="volverInicio">Volver al inicio</button>
+  </section>
+</main>
+
+<script src="js/i18n.js"></script>
+<script src="js/respuestas.es.js"></script>
+<script src="js/respuestas.ca.js"></script>
+<script src="js/respuestas.en.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

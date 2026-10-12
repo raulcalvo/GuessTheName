@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// Reglas para el juego. Cada jugador entra con autenticación anónima y solo
+// puede escribir en su propia ficha. Las fichas (nombre y número de intentos)
+// se pueden listar para el ranking, pero lo que ha escrito cada uno en sus
+// intentos solo lo ve su dueño (y tú desde la consola de Firebase).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function ficha(id) {
+      return get(/databases/$(database)/documents/jugadores/$(id)).data;
+    }
+
+    // Datos del juego, cargados por el administrador. Se buscan por la huella
+    // del nombre, así que se pueden leer de uno en uno pero no listar.
+    match /secreto/{huella} {
+      allow get: if request.auth != null;
+      allow list, write: if false;
+    }
+    match /frases/{huella} {
+      allow get: if request.auth != null;
+      allow list, write: if false;
+    }
+
+    match /jugadores/{id} {
+      // Para saber si un nombre ya está cogido y para el ranking.
+      allow get, list: if request.auth != null;
+
+      allow create: if request.auth != null
+        && id.size() <= 60
+        && request.resource.data.keys().hasOnly(['nombre', 'uid', 'idioma', 'intentos', 'acertado', 'creado', 'actualizado'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() > 0
+        && request.resource.data.nombre.size() <= 60
+        && request.resource.data.intentos == 0
+        && request.resource.data.acertado == false;
+
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['intentos', 'acertado', 'acertadoEn', 'acertadoFecha', 'actualizado', 'idioma'])
+        && request.resource.data.intentos == resource.data.intentos + 1
+        // Una vez acertado, el resultado del ranking ya no cambia.
+        && (!('acertadoEn' in resource.data) || request.resource.data.acertadoEn == resource.data.acertadoEn);
+
+      allow delete: if false;
+
+      match /intentos/{intento} {
+        allow read: if request.auth != null && ficha(id).uid == request.auth.uid;
+        allow create: if request.auth != null
+          && ficha(id).uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['numero', 'texto', 'acierto', 'idioma', 'fecha'])
+          && request.resource.data.texto is string
+          && request.resource.data.texto.size() <= 60
+          && request.resource.data.acierto is bool;
+        allow update, delete: if false;
+      }
+    }
+  }
+}
