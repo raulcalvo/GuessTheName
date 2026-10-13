@@ -1,4 +1,4 @@
-const CACHE = "como-se-llamara-v15";
+const CACHE = "como-se-llamara-v16";
 const ARCHIVOS = [
   "./",
   "index.html",

@@ -33,7 +33,13 @@
   }
   .sospechosos .ranking li { border-color: #e2d6f5; flex-wrap: wrap; }
   .sospechosos .cuantos { color: #7a6cf0; }
-  .sospechosos .motivo { flex-basis: 100%; margin-left: calc(2.2em + 12px); font-size: 0.9rem; color: var(--texto-suave); }
+  .rendidos {
+    margin-top: 24px; padding: 4px 14px 10px;
+    border: 3px dashed #c9c9c9; border-radius: 20px; background: #f4f4f4;
+  }
+  .rendidos .ranking li { border-color: #e2e2e2; flex-wrap: wrap; opacity: 0.9; }
+  .rendidos .cuantos { color: var(--texto-suave); }
+  .rendidos .motivo, .sospechosos .motivo { flex-basis: 100%; margin-left: calc(2.2em + 12px); font-size: 0.9rem; color: var(--texto-suave); }
   .volver { display: inline-block; margin-top: 16px; color: var(--boton); font-weight: 600; }
 </style>
 </head>
@@ -58,6 +64,11 @@
     </div>
     <h2 id="titulo-pendientes" class="seccion" hidden></h2>
     <ul id="pendientes" class="ranking pendientes"></ul>
+    <div id="bloque-rendidos" class="rendidos" hidden>
+      <h2 id="titulo-rendidos" class="seccion"></h2>
+      <p id="intro-rendidos" class="intro"></p>
+      <ul id="rendidos" class="ranking"></ul>
+    </div>
     <a class="volver" id="volver" href="../">← </a>
   </section>
 </main>
@@ -73,6 +84,18 @@
       cargando: "Consultando el marcador...",
       nadie: "Todavía nadie lo ha adivinado. ¡El podio está libre!",
       pendientes: "Siguen intentándolo",
+      rendidos: "🏳️ Tiraron la toalla",
+      introRendidos: "Empezaron con mucha ilusión, probaron unos cuantos nombres y, a la primera dificultad, desaparecieron. Llevan más de una hora sin dar señales de vida. Son los auténticos perdedores de este juego.",
+      motivosRendidos: [
+        "Tiene la estantería llena de libros que no pasaron del capítulo dos.",
+        "Seguro que también deja las series a mitad de temporada.",
+        "Su gimnasio le sigue cobrando desde enero.",
+        "Empezó con más ganas que nadie. Lo de terminar ya, si eso, otro día.",
+        "Dijo «ahora vuelvo» y aquí seguimos esperando.",
+        "Tiene un puzle de 1000 piezas con 12 colocadas desde 2019.",
+        "Ni el bebé está tardando tanto en llegar.",
+        "Abandonó antes que los propósitos de Año Nuevo."
+      ],
       intento: "1 intento", intentos: "{n} intentos",
       leyendaPistas: "Quien no ha abierto pistas va por delante; 🔎 = pistas abiertas.",
       sinNube: "El ranking no está disponible ahora mismo. Revisa la conexión y vuelve a probar.",
@@ -95,6 +118,18 @@
       cargando: "Consultant el marcador...",
       nadie: "Encara ningú l'ha endevinat. El podi és lliure!",
       pendientes: "Continuen intentant-ho",
+      rendidos: "🏳️ Van llençar la tovallola",
+      introRendidos: "Van començar amb molta il·lusió, van provar uns quants noms i, a la primera dificultat, van desaparèixer. Fa més d'una hora que no donen senyals de vida. Són els autèntics perdedors d'aquest joc.",
+      motivosRendidos: [
+        "Té la prestatgeria plena de llibres que no van passar del capítol dos.",
+        "Segur que també deixa les sèries a mitja temporada.",
+        "El gimnàs encara li cobra des de gener.",
+        "Va començar amb més ganes que ningú. Acabar ja, si de cas, un altre dia.",
+        "Va dir «ara torno» i aquí seguim esperant.",
+        "Té un trencaclosques de 1000 peces amb 12 posades des del 2019.",
+        "Ni el nadó està trigant tant a arribar.",
+        "Ha abandonat abans que els propòsits d'Any Nou."
+      ],
       intento: "1 intent", intentos: "{n} intents",
       leyendaPistas: "Qui no ha obert pistes va per davant; 🔎 = pistes obertes.",
       sinNube: "El rànquing no està disponible ara mateix. Revisa la connexió i torna-ho a provar.",
@@ -117,6 +152,18 @@
       cargando: "Checking the scoreboard...",
       nadie: "Nobody has guessed it yet. The podium is up for grabs!",
       pendientes: "Still trying",
+      rendidos: "🏳️ Threw in the towel",
+      introRendidos: "They started full of enthusiasm, tried a few names and vanished at the first hurdle. Not a sign of life for over an hour. These are the true losers of this game.",
+      motivosRendidos: [
+        "Their bookshelf is full of books that never made it past chapter two.",
+        "Bet they quit TV series halfway through the season too.",
+        "Their gym has been charging them since January.",
+        "Started keener than anyone. Finishing? Maybe some other day.",
+        "Said \"back in a sec\" and we're still waiting.",
+        "Has had a 1000-piece puzzle with 12 pieces in place since 2019.",
+        "Even the baby is taking less time to arrive.",
+        "Gave up faster than a New Year's resolution."
+      ],
       intento: "1 attempt", intentos: "{n} attempts",
       leyendaPistas: "Players who opened no clues rank first; 🔎 = clues opened.",
       sinNube: "The leaderboard isn't available right now. Check your connection and try again.",
@@ -157,6 +204,17 @@
     lista.append(li);
   }
 
+  const HORA_RENDIDO = 60 * 60 * 1000;
+
+  // Siempre la misma frase para la misma persona.
+  function motivo(lista, j, frases) {
+    const semilla = Array.from(j.nombre).reduce((a, c) => (a * 31 + c.codePointAt(0)) >>> 0, 7);
+    const span = document.createElement("span");
+    span.className = "motivo";
+    span.textContent = frases[semilla % frases.length];
+    lista.lastChild.append(span);
+  }
+
   // null mientras carga, false si no hay conexión.
   let datos = null;
 
@@ -168,7 +226,8 @@
     $("titulo").textContent = T.titulo;
     $("intro").textContent = T.intro + " " + T.leyendaPistas;
     $("volver").textContent = T.volver;
-    for (const id of ["ganadores", "sospechosos", "pendientes"]) $(id).replaceChildren();
+    for (const id of ["ganadores", "sospechosos", "pendientes", "rendidos"]) $(id).replaceChildren();
+    $("bloque-rendidos").hidden = true;
     $("bloque-sospechosos").hidden = true;
     $("titulo-pendientes").hidden = true;
     if (datos === null) { $("estado").textContent = T.cargando; return; }
@@ -192,18 +251,27 @@
       $("intro-sospechosos").textContent = T.introSospechosos.replace("{max}", MAX_SOSPECHOSO);
       sospechosos.forEach((j) => {
         fila($("sospechosos"), null, j.nombre, intentosDe(j), "🕵️");
-        // Siempre el mismo motivo para la misma persona.
-        const semilla = Array.from(j.nombre).reduce((a, c) => a + c.codePointAt(0), 0);
-        const motivo = document.createElement("span");
-        motivo.className = "motivo";
-        motivo.textContent = T.motivos[semilla % T.motivos.length];
-        $("sospechosos").lastChild.append(motivo);
+        motivo($("sospechosos"), j, T.motivos);
       });
     }
-    if (r.pendientes.length) {
+    // Quien lleva más de una hora sin intentarlo y sin acertar, ha tirado la toalla.
+    const ahora = Date.now();
+    const rendido = (j) => j.actualizado && j.actualizado.toMillis && ahora - j.actualizado.toMillis() > HORA_RENDIDO;
+    const activos = r.pendientes.filter((j) => !rendido(j));
+    const rendidos = r.pendientes.filter(rendido);
+    if (activos.length) {
       $("titulo-pendientes").hidden = false;
       $("titulo-pendientes").textContent = T.pendientes;
-      r.pendientes.forEach((j) => fila($("pendientes"), null, j.nombre, j.intentos, null, j.pistasAbiertas || 0));
+      activos.forEach((j) => fila($("pendientes"), null, j.nombre, j.intentos, null, j.pistasAbiertas || 0));
+    }
+    if (rendidos.length) {
+      $("bloque-rendidos").hidden = false;
+      $("titulo-rendidos").textContent = T.rendidos;
+      $("intro-rendidos").textContent = T.introRendidos;
+      rendidos.forEach((j) => {
+        fila($("rendidos"), null, j.nombre, j.intentos, "🏳️", j.pistasAbiertas || 0);
+        motivo($("rendidos"), j, T.motivosRendidos);
+      });
     }
   }
 
