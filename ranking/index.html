@@ -75,7 +75,7 @@
 
 <script src="../js/i18n.js"></script>
 <script type="module">
-  import { obtenerRanking, MAX_SOSPECHOSO } from "../js/almacen.js";
+  import { escucharRanking, MAX_SOSPECHOSO } from "../js/almacen.js";
 
   const TEXTOS = {
     es: {
@@ -282,13 +282,13 @@
   }));
 
   pintar();
-  try {
-    datos = (await obtenerRanking()) || false;
-  } catch (e) {
-    console.error(e);
-    datos = false;
-  }
-  pintar();
+  // En tiempo real: se repinta en cuanto alguien juega, sin recargar la página.
+  escucharRanking(
+    (r) => { datos = r; pintar(); },
+    (e) => { console.error(e); if (!datos) { datos = false; pintar(); } }
+  );
+  // Quien deja de jugar pasa a "tiraron la toalla" con el tiempo, aunque nada cambie.
+  setInterval(() => { if (datos) pintar(); }, 60000);
 </script>
 </body>
 </html>

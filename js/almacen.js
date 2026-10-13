@@ -126,6 +126,18 @@ export async function obtenerRanking() {
   if (!(await iniciar)) return null;
   const { db, f } = fb;
   const snap = await conLimite(f.getDocs(f.collection(db, "jugadores")));
+  return ordenarRanking(snap);
+}
+
+// Igual que obtenerRanking, pero avisa cada vez que cambia algo. Firestore solo
+// vuelve a leer los jugadores que cambian, así que gasta muy pocas lecturas.
+export async function escucharRanking(alCambiar, alFallar) {
+  if (!(await iniciar)) { alFallar(new Error("Sin conexión con Firebase")); return () => {}; }
+  const { db, f } = fb;
+  return f.onSnapshot(f.collection(db, "jugadores"), (snap) => alCambiar(ordenarRanking(snap)), alFallar);
+}
+
+function ordenarRanking(snap) {
   const ms = (t) => (t && t.toMillis ? t.toMillis() : Infinity);
   const jugadores = snap.docs.map((d) => d.data()).filter((j) => (j.intentos || 0) > 0);
   const ganadores = jugadores.filter((j) => j.acertado)
