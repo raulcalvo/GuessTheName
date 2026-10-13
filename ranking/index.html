@@ -101,7 +101,7 @@
         "Abandonó antes que los propósitos de Año Nuevo."
       ],
       intento: "1 intento", intentos: "{n} intentos",
-      leyendaPistas: "Quien no ha abierto pistas va por delante; 🔎 = pistas abiertas.",
+      leyendaPistas: "Manda el número de intentos; 🔎 indica las pistas que abrió cada uno, para que conste.",
       sinNube: "El ranking no está disponible ahora mismo. Revisa la conexión y vuelve a probar.",
       volver: "← Volver al juego",
       sospechosos: "🕵️ Bajo sospecha",
@@ -135,7 +135,7 @@
         "Ha abandonat abans que els propòsits d'Any Nou."
       ],
       intento: "1 intent", intentos: "{n} intents",
-      leyendaPistas: "Qui no ha obert pistes va per davant; 🔎 = pistes obertes.",
+      leyendaPistas: "Mana el nombre d'intents; 🔎 indica les pistes que va obrir cadascú, perquè consti.",
       sinNube: "El rànquing no està disponible ara mateix. Revisa la connexió i torna-ho a provar.",
       volver: "← Torna al joc",
       sospechosos: "🕵️ Sota sospita",
@@ -169,7 +169,7 @@
         "Gave up faster than a New Year's resolution."
       ],
       intento: "1 attempt", intentos: "{n} attempts",
-      leyendaPistas: "Players who opened no clues rank first; 🔎 = clues opened.",
+      leyendaPistas: "Fewest attempts wins; 🔎 shows how many clues each player opened, just for the record.",
       sinNube: "The leaderboard isn't available right now. Check your connection and try again.",
       volver: "← Back to the game",
       sospechosos: "🕵️ Under suspicion",
@@ -241,12 +241,15 @@
     const sospechosos = r.ganadores.filter((j) => intentosDe(j) <= MAX_SOSPECHOSO);
     const ganadores = r.ganadores.filter((j) => intentosDe(j) > MAX_SOSPECHOSO);
     $("estado").textContent = ganadores.length ? "" : T.nadie;
-    // Empates: misma posición para las mismas pistas abiertas e intentos.
+    // Solo cuentan los intentos (las pistas se muestran a título informativo).
+    // Se ordena aquí también por si el navegador tiene una versión vieja de almacen.js.
+    const ms = (t) => (t && t.toMillis ? t.toMillis() : Infinity);
+    ganadores.sort((a, b) => intentosDe(a) - intentosDe(b) || ms(a.acertadoFecha) - ms(b.acertadoFecha));
+    // Empates: misma posición para el mismo número de intentos.
     let posicion = 0, anterior = null;
     ganadores.forEach((j, i) => {
       const n = intentosDe(j);
-      const clave = `${pistasUsadas(j)}-${n}`;
-      if (clave !== anterior) { posicion = i + 1; anterior = clave; }
+      if (n !== anterior) { posicion = i + 1; anterior = n; }
       fila($("ganadores"), posicion, j.nombre, n, null, pistasUsadas(j));
     });
     if (sospechosos.length) {

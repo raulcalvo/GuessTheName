@@ -4,7 +4,6 @@ import * as almacen from "./almacen.js";
 const { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pistasDesbloqueadas, obtenerPista, abrirPista, obtenerRanking } = almacen;
 const MAX_SOSPECHOSO = almacen.MAX_SOSPECHOSO || 3;
 const UMBRAL_PISTA_FINAL = almacen.UMBRAL_PISTA_FINAL || 200;
-const pistasUsadas = (j) => (j.pistasAbiertas || 0) + (j.pistaFinal ? 1 : 0);
 
 (() => {
   "use strict";
@@ -63,9 +62,7 @@ const pistasUsadas = (j) => (j.pistasAbiertas || 0) + (j.pistaFinal ? 1 : 0);
       el.textContent = T("posicionSospechoso");
     } else {
       const rivales = ranking.ganadores.filter((j) => j.nombre !== jugador && (j.acertadoEn || j.intentos) > MAX_SOSPECHOSO);
-      const mias = pistasAbiertas + (pistaFinal ? 1 : 0);
-      const delante = rivales.filter((j) => pistasUsadas(j) < mias
-        || (pistasUsadas(j) === mias && (j.acertadoEn || j.intentos) < n)).length;
+      const delante = rivales.filter((j) => (j.acertadoEn || j.intentos) < n).length;
       el.textContent = delante === 0 ? T("posicionPrimero")
         : T("posicion").replace("{pos}", delante + 1).replace("{total}", rivales.length + 1);
     }
@@ -200,8 +197,7 @@ const pistasUsadas = (j) => (j.pistasAbiertas || 0) + (j.pistaFinal ? 1 : 0);
       const n = (j) => j.acertadoEn || j.intentos;
       if (n(yo) <= MAX_SOSPECHOSO) return { sospechoso: true };
       const tabla = r.ganadores.filter((j) => n(j) > MAX_SOSPECHOSO);
-      const pistas = pistasUsadas;
-      const pos = 1 + tabla.filter((j) => pistas(j) < pistas(yo) || (pistas(j) === pistas(yo) && n(j) < n(yo))).length;
+      const pos = 1 + tabla.filter((j) => n(j) < n(yo)).length;
       return { pos, total: tabla.length };
     } catch (e) {
       console.warn(e);
