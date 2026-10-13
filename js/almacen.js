@@ -83,7 +83,7 @@ async function reclamarJugadorUnaVez(nombre, idioma) {
     const datos = snap.data();
     if (datos.uid !== uid) return { estado: "ocupado" };
     if (datos.acertado) yaAcertado.add(id);
-    return { estado: "mio", intentos: datos.intentos || 0, acertado: !!datos.acertado, pistasAbiertas: datos.pistasAbiertas || 0 };
+    return { estado: "mio", intentos: datos.intentos || 0, acertado: !!datos.acertado, acertadoEn: datos.acertadoEn || null, pistasAbiertas: datos.pistasAbiertas || 0 };
   }));
 }
 

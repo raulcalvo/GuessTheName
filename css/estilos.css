@@ -211,3 +211,7 @@ button.enlace:active { transform: none; box-shadow: none; }
 .posicion-provisional { margin: 8px 0 0; font-weight: 600; color: var(--boton); font-size: 0.95rem; }
 .enlace-ranking { display: inline-block; margin-top: 18px; color: var(--boton); font-weight: 600; text-decoration: none; }
 .enlace-ranking:hover { text-decoration: underline; }
+.posicion-final { margin: 0 0 24px; padding: 14px 16px; border-radius: 18px; background: #fffaf0; border: 2px solid #ffd36e; }
+.posicion-final p { margin: 0; line-height: 1.5; }
+.posicion-final-puesto { font-weight: 700; font-size: 1.15rem; margin-bottom: 6px !important; }
+.posicion-final-puesto:empty { display: none; }

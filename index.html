@@ -96,6 +96,20 @@
     <button type="button" id="boton-continuar" data-i18n="continuar">Continuar</button>
   </section>
 
+  <!-- Pantalla 5: vuelve alguien que ya lo adivinó -->
+  <section id="pantalla-ya-acertado" class="pantalla">
+    <p class="jugando-como"><span class="jugando-como-texto"></span> <button type="button" id="boton-no-soy-yo-2" class="enlace" data-i18n="noSoyYo">¿No eres tú?</button></p>
+    <div class="emoji-grande" aria-hidden="true">🤫</div>
+    <h2 data-i18n="yaAcertadoTitulo">¡Tú ya lo sabes!</h2>
+    <p id="texto-ya-acertado" class="mensaje"></p>
+    <div id="posicion-final" class="posicion-final" hidden>
+      <p id="posicion-final-puesto" class="posicion-final-puesto"></p>
+      <p id="posicion-final-frase"></p>
+    </div>
+    <button type="button" id="boton-ver-foto" data-i18n="verFotoOtraVez" hidden>Volver a ver la foto</button>
+    <a class="enlace-ranking" href="ranking/" data-i18n="verRanking">🏆 Ver el ranking</a>
+  </section>
+
   <!-- Pantalla 4: la sorpresa -->
   <section id="pantalla-sorpresa" class="pantalla">
     <h2 data-i18n="presentamos">¡Os presentamos a...!</h2>

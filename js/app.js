@@ -8,7 +8,7 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
   const IMAGEN = "assets/sorpresa.bin";
 
   const $ = (id) => document.getElementById(id);
-  const pantallas = ["pantalla-jugador", "pantalla-juego", "pantalla-fallo", "pantalla-acierto", "pantalla-sorpresa"];
+  const pantallas = ["pantalla-jugador", "pantalla-juego", "pantalla-fallo", "pantalla-acierto", "pantalla-sorpresa", "pantalla-ya-acertado"];
   const input = $("nombre");
   const botonAdivinar = $("boton-adivinar");
 
@@ -32,6 +32,7 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
   let intentos = 0;
   let pistasAbiertas = 0;
   let acertado = false;
+  let acertadoEn = null;
   const pintarContador = () => {
     $("contador").textContent = intentos === 0 ? ""
       : intentos === 1 ? T("contador1")
@@ -113,6 +114,7 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
     input.placeholder = T("placeholder");
     $("jugador").placeholder = T("jugadorPlaceholder");
     if (jugador) $("jugando-como").textContent = T("jugandoComo").replace("{nombre}", jugador);
+    pintarYaAcertado();
     $("aviso-jugador").textContent = "";
     $("imagen-sorpresa").alt = T("altImagen");
     document.querySelectorAll("[data-idioma]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.idioma === idioma)));
@@ -156,6 +158,82 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
   const emojisFallo = ["🙈", "😅", "🤭", "🙃", "😬", "🤔", "🧐"];
   const azar = (lista) => lista[Math.floor(Math.random() * lista.length)];
 
+  // ---------- Quien vuelve después de acertar ----------
+  // La clave de la foto solo la da Firestore al acertar; se guarda en este
+  // dispositivo para poder volver a verla.
+  const leerSecretoGuardado = () => {
+    try { return JSON.parse(localStorage.getItem("secreto") || "null"); } catch (e) { return null; }
+  };
+
+  function pintarYaAcertado() {
+    if (!jugador || !acertado) return;
+    const n = acertadoEn || intentos;
+    const veces = n === 1 ? T("vecesPrimera") : T("vecesN").replace("{n}", n);
+    document.querySelector("#pantalla-ya-acertado .jugando-como-texto").textContent = T("jugandoComo").replace("{nombre}", jugador);
+    $("texto-ya-acertado").textContent = T("yaAcertado").replace("{nombre}", jugador.split(" ")[0]).replace("{veces}", veces);
+    $("boton-ver-foto").hidden = !(secreto || leerSecretoGuardado());
+    pintarPosicionFinal();
+  }
+
+  // Puesto en el ranking, con el mismo criterio que la página del ranking.
+  let posicionFinal = null;
+  async function calcularPosicionFinal() {
+    try {
+      const r = await obtenerRanking();
+      const yo = r && r.ganadores.find((j) => j.nombre === jugador);
+      if (!yo) return null;
+      const n = (j) => j.acertadoEn || j.intentos;
+      if (n(yo) <= MAX_SOSPECHOSO) return { sospechoso: true };
+      const tabla = r.ganadores.filter((j) => n(j) > MAX_SOSPECHOSO);
+      const pistas = (j) => j.pistasAbiertas || 0;
+      const pos = 1 + tabla.filter((j) => pistas(j) < pistas(yo) || (pistas(j) === pistas(yo) && n(j) < n(yo))).length;
+      return { pos, total: tabla.length };
+    } catch (e) {
+      console.warn(e);
+      return null;
+    }
+  }
+
+  function pintarPosicionFinal() {
+    const p = posicionFinal;
+    $("posicion-final").hidden = !p;
+    if (!p) return;
+    if (p.sospechoso) {
+      $("posicion-final-puesto").textContent = "";
+      $("posicion-final-frase").textContent = T("fraseSospechoso");
+      return;
+    }
+    const { pos, total } = p;
+    $("posicion-final-puesto").textContent = T("posFinal").replace("{pos}", pos).replace("{total}", total);
+    const frase = pos === 1 ? "fraseOro"
+      : pos <= 3 ? "frasePodio"
+      : pos <= Math.ceil(total / 2) ? "fraseBien"
+      : pos === total ? "fraseUltimo"
+      : "fraseRegular";
+    $("posicion-final-frase").textContent = T(frase);
+  }
+
+  async function mostrarYaAcertado() {
+    pintarYaAcertado();
+    mostrar("pantalla-ya-acertado");
+    posicionFinal = await calcularPosicionFinal();
+    pintarYaAcertado();
+  }
+
+  $("boton-ver-foto").addEventListener("click", async () => {
+    const boton = $("boton-ver-foto");
+    boton.disabled = true;
+    try {
+      if (!secreto) secreto = leerSecretoGuardado();
+      $("imagen-sorpresa").src = await descifrarImagen();
+      mostrar("pantalla-sorpresa");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      boton.disabled = false;
+    }
+  });
+
   // ---------- Quién juega ----------
   async function entrar(nombre, silencioso) {
     const boton = $("boton-jugador");
@@ -176,10 +254,12 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
       intentos = r.intentos || 0;
       pistasAbiertas = r.pistasAbiertas || 0;
       acertado = !!r.acertado;
+      acertadoEn = r.acertadoEn || null;
       $("jugando-como").textContent = T("jugandoComo").replace("{nombre}", jugador);
       pintarContador();
       pintarPistas();
-      mostrar("pantalla-juego");
+      if (acertado) mostrarYaAcertado();
+      else mostrar("pantalla-juego");
       return true;
     } catch (e) {
       console.error(e);
@@ -201,18 +281,23 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
     entrar(nombre, false);
   });
 
-  $("boton-no-soy-yo").addEventListener("click", () => {
+  const noSoyYo = () => {
     jugador = null;
     intentos = 0;
     pistasAbiertas = 0;
     acertado = false;
-    try { localStorage.removeItem("jugador"); } catch (e) {}
+    acertadoEn = null;
+    secreto = null;
+    posicionFinal = null;
+    try { localStorage.removeItem("jugador"); localStorage.removeItem("secreto"); } catch (e) {}
     $("jugador").value = "";
     pintarContador();
     pintarPistas();
     mostrar("pantalla-jugador");
     $("jugador").focus();
-  });
+  };
+  $("boton-no-soy-yo").addEventListener("click", noSoyYo);
+  $("boton-no-soy-yo-2").addEventListener("click", noSoyYo);
 
   // ---------- Juego ----------
   $("formulario").addEventListener("submit", async (ev) => {
@@ -235,8 +320,13 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
       const primeraPalabra = texto.split(/\s+/)[0];
       const r = await consultarNombre(primeraPalabra !== texto ? [texto, primeraPalabra] : [texto]);
       const acierto = r.acierto;
-      if (acierto) { secreto = r.secreto; acertado = true; }
       intentos++;
+      if (acierto) {
+        secreto = r.secreto;
+        acertado = true;
+        acertadoEn = intentos;
+        try { localStorage.setItem("secreto", JSON.stringify(secreto)); } catch (e) {}
+      }
       registrarIntento(jugador, { texto, numero: intentos, acierto, idioma });
 
       if (acierto) {
@@ -294,7 +384,8 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
 
   $("boton-otra-vez").addEventListener("click", () => {
     input.value = "";
-    mostrar("pantalla-juego");
+    if (acertado) mostrarYaAcertado();
+    else mostrar("pantalla-juego");
   });
 
   aplicarIdioma(idioma);
