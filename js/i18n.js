@@ -6,9 +6,9 @@ const I18N_UI = {
   es: {
     tituloPagina: "¿Cómo se llamará?",
     jugadorTitulo: "¿Quién eres?",
-    jugadorIntro: "Antes de nada, dinos tu nombre. Apuntaremos tus intentos en el marcador oficial, para la gloria o para la vergüenza. 😏",
-    jugadorEtiqueta: "Tu nombre",
-    jugadorPlaceholder: "Tu nombre...",
+    jugadorIntro: "Antes de nada, dinos tu nombre y apellido (el apellido es para que sepamos quién eres). Apuntaremos tus intentos en el marcador oficial, para la gloria o para la vergüenza. 😏",
+    jugadorEtiqueta: "Tu nombre y apellido",
+    jugadorPlaceholder: "Nombre y apellido...",
     jugadorEntrar: "¡A jugar!",
     jugadorComprobando: "Comprobando...",
     jugadorVacio: "Sin nombre no hay juego. ¿Cómo te llamas?",
@@ -50,9 +50,9 @@ const I18N_UI = {
   ca: {
     tituloPagina: "Com es dirà?",
     jugadorTitulo: "Qui ets?",
-    jugadorIntro: "Abans de res, digues-nos el teu nom. Apuntarem els teus intents al marcador oficial, per a la glòria o per a la vergonya. 😏",
-    jugadorEtiqueta: "El teu nom",
-    jugadorPlaceholder: "El teu nom...",
+    jugadorIntro: "Abans de res, digues-nos el teu nom i cognom (el cognom és perquè sapiguem qui ets). Apuntarem els teus intents al marcador oficial, per a la glòria o per a la vergonya. 😏",
+    jugadorEtiqueta: "El teu nom i cognom",
+    jugadorPlaceholder: "Nom i cognom...",
     jugadorEntrar: "A jugar!",
     jugadorComprobando: "Comprovant...",
     jugadorVacio: "Sense nom no hi ha joc. Com et dius?",
@@ -94,9 +94,9 @@ const I18N_UI = {
   en: {
     tituloPagina: "What will the baby be called?",
     jugadorTitulo: "Who are you?",
-    jugadorIntro: "First things first: tell us your name. We'll record your attempts on the official scoreboard, for glory or for shame. 😏",
-    jugadorEtiqueta: "Your name",
-    jugadorPlaceholder: "Your name...",
+    jugadorIntro: "First things first: tell us your first name and surname (the surname is so we know who you are). We'll record your attempts on the official scoreboard, for glory or for shame. 😏",
+    jugadorEtiqueta: "Your first name and surname",
+    jugadorPlaceholder: "First name and surname...",
     jugadorEntrar: "Let's play!",
     jugadorComprobando: "Checking...",
     jugadorVacio: "No name, no game. What's your name?",
@@ -139,8 +139,16 @@ const I18N_UI = {
 
 const IDIOMAS = Object.keys(I18N_UI);
 
-// Idioma elegido a mano, o el del navegador/sistema, o castellano.
+// Idioma del enlace, el elegido a mano, el del navegador/sistema, o castellano.
 function detectarIdioma() {
+  // Un enlace con ?lang=en (o ca, es) manda sobre todo lo demás y se recuerda.
+  try {
+    const delEnlace = new URLSearchParams(location.search).get("lang");
+    if (delEnlace && IDIOMAS.includes(delEnlace.toLowerCase())) {
+      try { localStorage.setItem("idioma", delEnlace.toLowerCase()); } catch (e) {}
+      return delEnlace.toLowerCase();
+    }
+  } catch (e) {}
   try {
     const guardado = localStorage.getItem("idioma");
     if (IDIOMAS.includes(guardado)) return guardado;
