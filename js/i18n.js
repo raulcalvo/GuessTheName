@@ -53,6 +53,10 @@ const I18N_UI = {
     altImagen: "La sorpresa",
     secreto: "Ahora, por favor, guarda el secreto. 🤫",
     volverInicio: "Volver al inicio",
+    verRanking: "🏆 Ver el ranking",
+    posicion: "Si aciertas en el próximo intento, quedarías en el puesto {pos} de {total}.",
+    posicionPrimero: "Si aciertas en el próximo intento, ¡te pondrías en cabeza! 🥇",
+    posicionSospechoso: "Si aciertas ya, irías directo a la lista de sospechosos. 🕵️",
     errorTitulo: "¡Vaya!",
     errorTexto: "El oráculo no responde. Comprueba que tienes conexión a internet y vuelve a probar."
   },
@@ -106,6 +110,10 @@ const I18N_UI = {
     altImagen: "La sorpresa",
     secreto: "Ara, si us plau, guarda el secret. 🤫",
     volverInicio: "Torna a l'inici",
+    verRanking: "🏆 Mira el rànquing",
+    posicion: "Si l'encertes al proper intent, quedaries a la posició {pos} de {total}.",
+    posicionPrimero: "Si l'encertes al proper intent, et posaries al capdamunt! 🥇",
+    posicionSospechoso: "Si l'encertes ara, aniries directe a la llista de sospitosos. 🕵️",
     errorTitulo: "Vaja!",
     errorTexto: "L'oracle no respon. Comprova que tens connexió a internet i torna-ho a provar."
   },
@@ -159,6 +167,10 @@ const I18N_UI = {
     altImagen: "The surprise",
     secreto: "Now, please, keep the secret. 🤫",
     volverInicio: "Back to the start",
+    verRanking: "🏆 See the leaderboard",
+    posicion: "Guess it on your next try and you'd be number {pos} of {total}.",
+    posicionPrimero: "Guess it on your next try and you'd go straight to the top! 🥇",
+    posicionSospechoso: "Guess it now and you'd go straight onto the suspects list. 🕵️",
     errorTitulo: "Oops!",
     errorTexto: "The oracle isn't answering. Check your internet connection and try again."
   }

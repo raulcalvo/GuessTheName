@@ -207,3 +207,7 @@ button.enlace:active { transform: none; box-shadow: none; }
 #ofrecer-pista { text-align: center; margin-top: 8px; }
 #ofrecer-pista .disponibles { font-weight: 700; margin: 4px 0; }
 #ofrecer-pista .aviso-merito { font-size: 0.9rem; color: var(--texto-suave); margin: 0 0 12px; }
+
+.posicion-provisional { margin: 8px 0 0; font-weight: 600; color: var(--boton); font-size: 0.95rem; }
+.enlace-ranking { display: inline-block; margin-top: 18px; color: var(--boton); font-weight: 600; text-decoration: none; }
+.enlace-ranking:hover { text-decoration: underline; }

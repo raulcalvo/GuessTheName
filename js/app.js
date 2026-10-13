@@ -1,4 +1,4 @@
-import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pistasDesbloqueadas, obtenerPista, abrirPista } from "./almacen.js";
+import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pistasDesbloqueadas, obtenerPista, abrirPista, obtenerRanking, MAX_SOSPECHOSO } from "./almacen.js";
 
 (() => {
   "use strict";
@@ -38,6 +38,31 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
       : `${T("contadorN").replace("{n}", intentos)} ${intentos >= 10 ? T("perseverancia") : T("animo")}`;
   };
 
+  // ---------- Posición provisional ----------
+  // Dónde quedaría el jugador si acertara en el próximo intento. El ranking se
+  // pide como mucho una vez por minuto.
+  let ranking = null, rankingPedido = 0;
+  async function pintarPosicion() {
+    const el = $("posicion-provisional");
+    if (!jugador || acertado) { el.hidden = true; return; }
+    if (Date.now() - rankingPedido > 60000) {
+      rankingPedido = Date.now();
+      try { ranking = await obtenerRanking(); } catch (e) { console.warn(e); }
+    }
+    if (!ranking || !jugador || acertado) { el.hidden = true; return; }
+    const n = intentos + 1;
+    if (n <= MAX_SOSPECHOSO) {
+      el.textContent = T("posicionSospechoso");
+    } else {
+      const rivales = ranking.ganadores.filter((j) => j.nombre !== jugador && (j.acertadoEn || j.intentos) > MAX_SOSPECHOSO);
+      const delante = rivales.filter((j) => (j.pistasAbiertas || 0) < pistasAbiertas
+        || ((j.pistasAbiertas || 0) === pistasAbiertas && (j.acertadoEn || j.intentos) < n)).length;
+      el.textContent = delante === 0 ? T("posicionPrimero")
+        : T("posicion").replace("{pos}", delante + 1).replace("{total}", rivales.length + 1);
+    }
+    el.hidden = false;
+  }
+
   // ---------- Pistas ----------
   const textoPista = (p) => p[idioma] || p.es;
 
@@ -59,6 +84,7 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
       $("boton-abrir-pista").textContent = T("abrirPista").replace("{n}", abiertas + 1);
     }
     $("pistas").hidden = pistas.length === 0 && disponibles === 0;
+    pintarPosicion();
     const faltan = n < UMBRALES_PISTAS.length ? UMBRALES_PISTAS[n] - intentos : 0;
     $("proxima-pista").textContent = !jugador || !faltan ? ""
       : faltan === 1 ? T("proximaPista1") : T("proximaPista").replace("{n}", faltan);

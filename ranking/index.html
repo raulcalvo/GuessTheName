@@ -38,6 +38,12 @@
 </style>
 </head>
 <body>
+<nav class="idiomas" aria-label="Idioma / Language">
+  <button type="button" data-idioma="es" lang="es">ES</button>
+  <button type="button" data-idioma="ca" lang="ca">CA</button>
+  <button type="button" data-idioma="en" lang="en">EN</button>
+</nav>
+
 <main>
   <section class="pantalla activa">
     <div class="globos" aria-hidden="true">🏆 👶 🏆</div>
@@ -58,7 +64,7 @@
 
 <script src="../js/i18n.js"></script>
 <script type="module">
-  import { obtenerRanking } from "../js/almacen.js";
+  import { obtenerRanking, MAX_SOSPECHOSO } from "../js/almacen.js";
 
   const TEXTOS = {
     es: {
@@ -129,18 +135,9 @@
     }
   };
 
-  const idioma = detectarIdioma();
-  const T = TEXTOS[idioma] || TEXTOS.es;
-  document.documentElement.lang = idioma;
-  document.title = T.titulo;
+  let idioma = detectarIdioma();
+  let T = TEXTOS[idioma] || TEXTOS.es;
   const $ = (id) => document.getElementById(id);
-  $("titulo").textContent = T.titulo;
-  $("intro").textContent = T.intro + " " + T.leyendaPistas;
-  $("volver").textContent = T.volver;
-  $("estado").textContent = T.cargando;
-
-  // Quien acierta en tan pocos intentos, probablemente ya lo sabía.
-  const MAX_SOSPECHOSO = 3;
   const medallas = ["🥇", "🥈", "🥉"];
   const veces = (n) => (n === 1 ? T.intento : T.intentos.replace("{n}", n));
 
@@ -160,9 +157,23 @@
     lista.append(li);
   }
 
-  try {
-    const r = await obtenerRanking();
-    if (!r) throw new Error("sin nube");
+  // null mientras carga, false si no hay conexión.
+  let datos = null;
+
+  function pintar() {
+    T = TEXTOS[idioma] || TEXTOS.es;
+    document.documentElement.lang = idioma;
+    document.title = T.titulo;
+    document.querySelectorAll("[data-idioma]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.idioma === idioma)));
+    $("titulo").textContent = T.titulo;
+    $("intro").textContent = T.intro + " " + T.leyendaPistas;
+    $("volver").textContent = T.volver;
+    for (const id of ["ganadores", "sospechosos", "pendientes"]) $(id).replaceChildren();
+    $("bloque-sospechosos").hidden = true;
+    $("titulo-pendientes").hidden = true;
+    if (datos === null) { $("estado").textContent = T.cargando; return; }
+    if (datos === false) { $("estado").textContent = T.sinNube; return; }
+    const r = datos;
     const intentosDe = (j) => j.acertadoEn || j.intentos;
     const sospechosos = r.ganadores.filter((j) => intentosDe(j) <= MAX_SOSPECHOSO);
     const ganadores = r.ganadores.filter((j) => intentosDe(j) > MAX_SOSPECHOSO);
@@ -170,7 +181,7 @@
     // Empates: misma posición para las mismas pistas abiertas e intentos.
     let posicion = 0, anterior = null;
     ganadores.forEach((j, i) => {
-      const n = j.acertadoEn || j.intentos;
+      const n = intentosDe(j);
       const clave = `${j.pistasAbiertas || 0}-${n}`;
       if (clave !== anterior) { posicion = i + 1; anterior = clave; }
       fila($("ganadores"), posicion, j.nombre, n, null, j.pistasAbiertas || 0);
@@ -194,10 +205,22 @@
       $("titulo-pendientes").textContent = T.pendientes;
       r.pendientes.forEach((j) => fila($("pendientes"), null, j.nombre, j.intentos, null, j.pistasAbiertas || 0));
     }
+  }
+
+  document.querySelectorAll("[data-idioma]").forEach((b) => b.addEventListener("click", () => {
+    idioma = b.dataset.idioma;
+    try { localStorage.setItem("idioma", idioma); } catch (e) {}
+    pintar();
+  }));
+
+  pintar();
+  try {
+    datos = (await obtenerRanking()) || false;
   } catch (e) {
     console.error(e);
-    $("estado").textContent = T.sinNube;
+    datos = false;
   }
+  pintar();
 </script>
 </body>
 </html>

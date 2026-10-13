@@ -119,6 +119,9 @@ function intentosLocales(id) {
 // Todos los jugadores con al menos un intento: primero los que han acertado
 // (menos pistas abiertas primero, luego menos intentos y, a igualdad, quien acertó antes)
 // y luego los que siguen probando.
+// Quien acierta en tan pocos intentos, probablemente ya lo sabía.
+export const MAX_SOSPECHOSO = 3;
+
 export async function obtenerRanking() {
   if (!(await iniciar)) return null;
   const { db, f } = fb;
