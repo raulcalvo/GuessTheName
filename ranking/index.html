@@ -27,6 +27,13 @@
   .pendientes .cuantos { color: var(--texto-suave); }
   .vacio { color: var(--texto-suave); }
   h2.seccion { font-size: 1.3rem; margin: 24px 0 12px; }
+  .sospechosos {
+    margin-top: 24px; padding: 4px 14px 10px;
+    border: 3px dashed #b9a6d9; border-radius: 20px; background: #f7f2ff;
+  }
+  .sospechosos .ranking li { border-color: #e2d6f5; flex-wrap: wrap; }
+  .sospechosos .cuantos { color: #7a6cf0; }
+  .sospechosos .motivo { flex-basis: 100%; margin-left: calc(2.2em + 12px); font-size: 0.9rem; color: var(--texto-suave); }
   .volver { display: inline-block; margin-top: 16px; color: var(--boton); font-weight: 600; }
 </style>
 </head>
@@ -38,6 +45,11 @@
     <p class="intro" id="intro"></p>
     <p id="estado" class="vacio"></p>
     <ol id="ganadores" class="ranking"></ol>
+    <div id="bloque-sospechosos" class="sospechosos" hidden>
+      <h2 id="titulo-sospechosos" class="seccion"></h2>
+      <p id="intro-sospechosos" class="intro"></p>
+      <ul id="sospechosos" class="ranking"></ul>
+    </div>
     <h2 id="titulo-pendientes" class="seccion" hidden></h2>
     <ul id="pendientes" class="ranking pendientes"></ul>
     <a class="volver" id="volver" href="../">← </a>
@@ -57,7 +69,18 @@
       pendientes: "Siguen intentándolo",
       intento: "1 intento", intentos: "{n} intentos",
       sinNube: "El ranking no está disponible ahora mismo. Revisa la conexión y vuelve a probar.",
-      volver: "← Volver al juego"
+      volver: "← Volver al juego",
+      sospechosos: "🕵️ Bajo sospecha",
+      introSospechosos: "Estos prodigios lo adivinaron en {max} intentos o menos. La organización no acusa a nadie, pero tampoco cree en las casualidades: quedan fuera del podio mientras dure la investigación.",
+      motivos: [
+        "Bajo acusación de haber cotilleado el móvil de los papás.",
+        "Dice que fue intuición. Nadie le cree.",
+        "Se le vio salir del registro civil silbando.",
+        "Perfil habitual en los chivatazos familiares.",
+        "Asegura que se lo dijo un pajarito. Investigamos al pajarito.",
+        "Tiene más información que el propio bebé.",
+        "Acertó tan rápido que ni le dio tiempo a disimular."
+      ]
     },
     ca: {
       titulo: "Rànquing d'oracles",
@@ -67,7 +90,18 @@
       pendientes: "Continuen intentant-ho",
       intento: "1 intent", intentos: "{n} intents",
       sinNube: "El rànquing no està disponible ara mateix. Revisa la connexió i torna-ho a provar.",
-      volver: "← Torna al joc"
+      volver: "← Torna al joc",
+      sospechosos: "🕵️ Sota sospita",
+      introSospechosos: "Aquests prodigis ho van endevinar en {max} intents o menys. L'organització no acusa ningú, però tampoc no creu en les casualitats: queden fora del podi mentre duri la investigació.",
+      motivos: [
+        "Sota acusació d'haver xafardejat el mòbil dels pares.",
+        "Diu que va ser intuïció. Ningú no s'ho creu.",
+        "El van veure sortir del registre civil xiulant.",
+        "Perfil habitual en les xivatades familiars.",
+        "Assegura que li ho va dir un ocellet. Investiguem l'ocellet.",
+        "Té més informació que el mateix nadó.",
+        "Ho va encertar tan ràpid que ni va tenir temps de dissimular."
+      ]
     },
     en: {
       titulo: "Oracle leaderboard",
@@ -77,7 +111,18 @@
       pendientes: "Still trying",
       intento: "1 attempt", intentos: "{n} attempts",
       sinNube: "The leaderboard isn't available right now. Check your connection and try again.",
-      volver: "← Back to the game"
+      volver: "← Back to the game",
+      sospechosos: "🕵️ Under suspicion",
+      introSospechosos: "These prodigies got it in {max} attempts or fewer. The organisers accuse no one, but they don't believe in coincidences either: they stay off the podium while the investigation continues.",
+      motivos: [
+        "Accused of snooping on the parents' phone.",
+        "Claims it was intuition. Nobody believes it.",
+        "Seen leaving the registry office, whistling.",
+        "A usual suspect in family leaks.",
+        "Says a little bird told them. We're questioning the bird.",
+        "Knows more than the baby does.",
+        "Guessed so fast they forgot to act surprised."
+      ]
     }
   };
 
@@ -91,15 +136,17 @@
   $("volver").textContent = T.volver;
   $("estado").textContent = T.cargando;
 
+  // Quien acierta en tan pocos intentos, probablemente ya lo sabía.
+  const MAX_SOSPECHOSO = 3;
   const medallas = ["🥇", "🥈", "🥉"];
   const veces = (n) => (n === 1 ? T.intento : T.intentos.replace("{n}", n));
 
-  function fila(lista, posicion, nombre, n) {
+  function fila(lista, posicion, nombre, n, icono) {
     const li = document.createElement("li");
     if (posicion && posicion <= 3) li.className = "podio-" + posicion;
     const pos = document.createElement("span");
     pos.className = "posicion";
-    pos.textContent = posicion ? (medallas[posicion - 1] || posicion + "º") : "·";
+    pos.textContent = posicion ? (medallas[posicion - 1] || posicion + "º") : (icono || "·");
     const quien = document.createElement("span");
     quien.className = "quien";
     quien.textContent = nombre;
@@ -113,14 +160,31 @@
   try {
     const r = await obtenerRanking();
     if (!r) throw new Error("sin nube");
-    $("estado").textContent = r.ganadores.length ? "" : T.nadie;
+    const intentosDe = (j) => j.acertadoEn || j.intentos;
+    const sospechosos = r.ganadores.filter((j) => intentosDe(j) <= MAX_SOSPECHOSO);
+    const ganadores = r.ganadores.filter((j) => intentosDe(j) > MAX_SOSPECHOSO);
+    $("estado").textContent = ganadores.length ? "" : T.nadie;
     // Empates: misma posición para el mismo número de intentos.
     let posicion = 0, anterior = null;
-    r.ganadores.forEach((j, i) => {
+    ganadores.forEach((j, i) => {
       const n = j.acertadoEn || j.intentos;
       if (n !== anterior) { posicion = i + 1; anterior = n; }
       fila($("ganadores"), posicion, j.nombre, n);
     });
+    if (sospechosos.length) {
+      $("bloque-sospechosos").hidden = false;
+      $("titulo-sospechosos").textContent = T.sospechosos;
+      $("intro-sospechosos").textContent = T.introSospechosos.replace("{max}", MAX_SOSPECHOSO);
+      sospechosos.forEach((j) => {
+        fila($("sospechosos"), null, j.nombre, intentosDe(j), "🕵️");
+        // Siempre el mismo motivo para la misma persona.
+        const semilla = Array.from(j.nombre).reduce((a, c) => a + c.codePointAt(0), 0);
+        const motivo = document.createElement("span");
+        motivo.className = "motivo";
+        motivo.textContent = T.motivos[semilla % T.motivos.length];
+        $("sospechosos").lastChild.append(motivo);
+      });
+    }
     if (r.pendientes.length) {
       $("titulo-pendientes").hidden = false;
       $("titulo-pendientes").textContent = T.pendientes;
