@@ -75,7 +75,10 @@
 
 <script src="../js/i18n.js"></script>
 <script type="module">
-  import { escucharRanking, MAX_SOSPECHOSO } from "../js/almacen.js";
+  // Importación tolerante: si el navegador aún tiene en caché una versión vieja
+// de almacen.js, el ranking sigue cargando aunque falte algo nuevo.
+  import * as almacen from "../js/almacen.js";
+  const MAX_SOSPECHOSO = almacen.MAX_SOSPECHOSO || 3;
 
   const TEXTOS = {
     es: {
@@ -282,11 +285,28 @@
   }));
 
   pintar();
-  // En tiempo real: se repinta en cuanto alguien juega, sin recargar la página.
-  escucharRanking(
-    (r) => { datos = r; pintar(); },
-    (e) => { console.error(e); if (!datos) { datos = false; pintar(); } }
-  );
+  // Primero una lectura normal, que es lo más rápido para pintar algo.
+  try {
+    datos = (await almacen.obtenerRanking()) || false;
+  } catch (e) {
+    console.error(e);
+    datos = false;
+  }
+  pintar();
+  // Después, en tiempo real: se repinta en cuanto alguien juega, sin recargar.
+  // Si la escucha no está disponible o falla, se consulta cada 30 segundos.
+  let consultando = null;
+  const consultarCada30s = () => {
+    if (consultando) return;
+    consultando = setInterval(async () => {
+      try { const r = await almacen.obtenerRanking(); if (r) { datos = r; pintar(); } } catch (e) { console.warn(e); }
+    }, 30000);
+  };
+  if (almacen.escucharRanking) {
+    almacen.escucharRanking((r) => { datos = r; pintar(); }, (e) => { console.warn(e); consultarCada30s(); });
+  } else {
+    consultarCada30s();
+  }
   // Quien deja de jugar pasa a "tiraron la toalla" con el tiempo, aunque nada cambie.
   setInterval(() => { if (datos) pintar(); }, 60000);
 </script>
