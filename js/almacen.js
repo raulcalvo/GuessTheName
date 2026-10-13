@@ -66,7 +66,7 @@ async function reclamarJugadorUnaVez(nombre, idioma) {
 
   const { db, uid, f } = fb;
   const ref = f.doc(db, "jugadores", id);
-  return conLimite(f.runTransaction(db, async (tx) => {
+  const r = await conLimite(f.runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists()) {
       tx.set(ref, {
@@ -83,8 +83,14 @@ async function reclamarJugadorUnaVez(nombre, idioma) {
     const datos = snap.data();
     if (datos.uid !== uid) return { estado: "ocupado" };
     if (datos.acertado) yaAcertado.add(id);
-    return { estado: "mio", intentos: datos.intentos || 0, acertado: !!datos.acertado, acertadoEn: datos.acertadoEn || null, pistasAbiertas: datos.pistasAbiertas || 0 };
+    return { estado: "mio", intentos: datos.intentos || 0, acertado: !!datos.acertado, acertadoEn: datos.acertadoEn || null, pistasAbiertas: datos.pistasAbiertas || 0, pistaFinal: !!datos.pistaFinal };
   }));
+  // Las reglas solo dejan leer las pistas si saben con qué ficha juega este dispositivo.
+  if (r.estado !== "ocupado") {
+    await conLimite(f.setDoc(f.doc(db, "uids", uid), { jugador: id }))
+      .catch((e) => console.warn("No se pudo vincular el dispositivo", e));
+  }
+  return r;
 }
 
 export function registrarIntento(nombreJugador, { texto, numero, acierto, idioma }) {
@@ -119,6 +125,9 @@ function intentosLocales(id) {
 // Todos los jugadores con al menos un intento: primero los que han acertado
 // (menos pistas abiertas primero, luego menos intentos y, a igualdad, quien acertó antes)
 // y luego los que siguen probando.
+// Pistas que cuentan en el ranking: las abiertas más la última, si la vio.
+export const pistasUsadas = (j) => (j.pistasAbiertas || 0) + (j.pistaFinal ? 1 : 0);
+
 // Quien acierta en tan pocos intentos, probablemente ya lo sabía.
 export const MAX_SOSPECHOSO = 3;
 
@@ -141,7 +150,7 @@ function ordenarRanking(snap) {
   const ms = (t) => (t && t.toMillis ? t.toMillis() : Infinity);
   const jugadores = snap.docs.map((d) => d.data()).filter((j) => (j.intentos || 0) > 0);
   const ganadores = jugadores.filter((j) => j.acertado)
-    .sort((a, b) => (a.pistasAbiertas || 0) - (b.pistasAbiertas || 0)
+    .sort((a, b) => pistasUsadas(a) - pistasUsadas(b)
       || (a.acertadoEn || a.intentos) - (b.acertadoEn || b.intentos)
       || ms(a.acertadoFecha) - ms(b.acertadoFecha));
   const pendientes = jugadores.filter((j) => !j.acertado)
@@ -207,4 +216,31 @@ export async function obtenerPista(indice) {
     console.warn("No se pudo leer la pista", indice + 1, e);
     return null;
   }
+}
+
+// Última pista: a los 200 intentos se enseñan las letras del nombre desordenadas.
+// Están en Firestore (pistas/final) y las reglas no las dejan leer antes.
+export const UMBRAL_PISTA_FINAL = 200;
+let letrasFinales = null;
+export async function obtenerPistaFinal() {
+  if (letrasFinales) return letrasFinales;
+  if (!(await iniciar)) return null;
+  const { db, f } = fb;
+  try {
+    const d = await conLimite(f.getDoc(f.doc(db, "pistas", "final")));
+    letrasFinales = d.exists() ? d.data().letras || null : null;
+    return letrasFinales;
+  } catch (e) {
+    console.warn("No se pudo leer la última pista", e);
+    return null;
+  }
+}
+
+export async function marcarPistaFinal(nombreJugador) {
+  if (!fb) return;
+  const { db, f } = fb;
+  await conLimite(f.updateDoc(f.doc(db, "jugadores", idJugador(nombreJugador)), {
+    pistaFinal: true,
+    actualizado: f.serverTimestamp()
+  })).catch((e) => console.warn("No se pudo apuntar la última pista", e));
 }

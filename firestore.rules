@@ -11,6 +11,16 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/jugadores/$(id)).data;
     }
 
+    // La ficha del jugador con el que juega este dispositivo (ver /uids).
+    function miFicha() {
+      return ficha(get(/databases/$(database)/documents/uids/$(request.auth.uid)).data.jugador);
+    }
+
+    // Fallos necesarios para poder leer cada pista.
+    function umbralPista(pista) {
+      return {'p1': 25, 'p2': 35, 'p3': 45, 'p4': 60, 'p5': 75, 'p6': 90, 'p7': 110, 'final': 200}[pista];
+    }
+
     // Datos del juego, cargados por el administrador. Se buscan por la huella
     // del nombre, así que se pueden leer de uno en uno pero no listar.
     match /secreto/{huella} {
@@ -21,9 +31,23 @@ service cloud.firestore {
       allow get: if request.auth != null;
       allow list, write: if false;
     }
+    // Cada pista solo se puede leer con los intentos necesarios en tu propia ficha.
     match /pistas/{pista} {
-      allow get: if request.auth != null;
+      allow get: if request.auth != null
+        && miFicha().uid == request.auth.uid
+        && miFicha().intentos >= umbralPista(pista);
       allow list, write: if false;
+    }
+
+    // Con qué ficha juega cada dispositivo. Solo puedes apuntarte a una ficha tuya.
+    match /uids/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['jugador'])
+        && request.resource.data.jugador is string
+        && ficha(request.resource.data.jugador).uid == uid;
+      allow list, delete: if false;
     }
 
     match /jugadores/{id} {
@@ -57,6 +81,14 @@ service cloud.firestore {
         && request.resource.data.pistasAbiertas == resource.data.get('pistasAbiertas', 0) + 1
         && request.resource.data.pistasAbiertas <= 7
         && resource.data.intentos >= [25, 35, 45, 60, 75, 90, 110][request.resource.data.pistasAbiertas - 1];
+
+      // La última pista (letras desordenadas) se apunta al llegar a 200 intentos.
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && resource.data.acertado == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pistaFinal', 'actualizado'])
+        && request.resource.data.pistaFinal == true
+        && resource.data.intentos >= 200;
 
       allow delete: if false;
 

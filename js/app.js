@@ -1,4 +1,10 @@
-import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pistasDesbloqueadas, obtenerPista, abrirPista, obtenerRanking, MAX_SOSPECHOSO } from "./almacen.js";
+// Importación tolerante: si el navegador aún tiene en caché una versión vieja de
+// almacen.js, lo que falte llega como undefined en vez de romper todo el juego.
+import * as almacen from "./almacen.js";
+const { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pistasDesbloqueadas, obtenerPista, abrirPista, obtenerRanking } = almacen;
+const MAX_SOSPECHOSO = almacen.MAX_SOSPECHOSO || 3;
+const UMBRAL_PISTA_FINAL = almacen.UMBRAL_PISTA_FINAL || 200;
+const pistasUsadas = (j) => (j.pistasAbiertas || 0) + (j.pistaFinal ? 1 : 0);
 
 (() => {
   "use strict";
@@ -31,6 +37,7 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
   try { jugador = localStorage.getItem("jugador"); } catch (e) {}
   let intentos = 0;
   let pistasAbiertas = 0;
+  let pistaFinal = false;
   let acertado = false;
   let acertadoEn = null;
   const pintarContador = () => {
@@ -56,8 +63,9 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
       el.textContent = T("posicionSospechoso");
     } else {
       const rivales = ranking.ganadores.filter((j) => j.nombre !== jugador && (j.acertadoEn || j.intentos) > MAX_SOSPECHOSO);
-      const delante = rivales.filter((j) => (j.pistasAbiertas || 0) < pistasAbiertas
-        || ((j.pistasAbiertas || 0) === pistasAbiertas && (j.acertadoEn || j.intentos) < n)).length;
+      const mias = pistasAbiertas + (pistaFinal ? 1 : 0);
+      const delante = rivales.filter((j) => pistasUsadas(j) < mias
+        || (pistasUsadas(j) === mias && (j.acertadoEn || j.intentos) < n)).length;
       el.textContent = delante === 0 ? T("posicionPrimero")
         : T("posicion").replace("{pos}", delante + 1).replace("{total}", rivales.length + 1);
     }
@@ -77,6 +85,13 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
       li.textContent = textoPista(p);
       return li;
     }));
+    const letras = pistaFinal && !acertado && almacen.obtenerPistaFinal ? await almacen.obtenerPistaFinal() : null;
+    if (letras) {
+      const li = document.createElement("li");
+      li.className = "pista-final-lista";
+      li.textContent = T("pistaFinalLista").replace("{letras}", Array.from(letras).join(" "));
+      lista.append(li);
+    }
     // Pistas desbloqueadas pero sin abrir: el jugador decide.
     const disponibles = acertado ? 0 : n - abiertas;
     $("ofrecer-pista").hidden = disponibles === 0;
@@ -84,7 +99,7 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
       $("pistas-disponibles").textContent = disponibles === 1 ? T("pistaDisponible1") : T("pistasDisponiblesN").replace("{n}", disponibles);
       $("boton-abrir-pista").textContent = T("abrirPista").replace("{n}", abiertas + 1);
     }
-    $("pistas").hidden = pistas.length === 0 && disponibles === 0;
+    $("pistas").hidden = pistas.length === 0 && disponibles === 0 && !letras;
     pintarPosicion();
     const faltan = n < UMBRALES_PISTAS.length ? UMBRALES_PISTAS[n] - intentos : 0;
     $("proxima-pista").textContent = !jugador || !faltan ? ""
@@ -185,7 +200,7 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
       const n = (j) => j.acertadoEn || j.intentos;
       if (n(yo) <= MAX_SOSPECHOSO) return { sospechoso: true };
       const tabla = r.ganadores.filter((j) => n(j) > MAX_SOSPECHOSO);
-      const pistas = (j) => j.pistasAbiertas || 0;
+      const pistas = pistasUsadas;
       const pos = 1 + tabla.filter((j) => pistas(j) < pistas(yo) || (pistas(j) === pistas(yo) && n(j) < n(yo))).length;
       return { pos, total: tabla.length };
     } catch (e) {
@@ -253,13 +268,17 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
       try { localStorage.setItem("jugador", nombre); } catch (e) {}
       intentos = r.intentos || 0;
       pistasAbiertas = r.pistasAbiertas || 0;
+      pistaFinal = !!r.pistaFinal;
       acertado = !!r.acertado;
       acertadoEn = r.acertadoEn || null;
       $("jugando-como").textContent = T("jugandoComo").replace("{nombre}", jugador);
       pintarContador();
       pintarPistas();
       if (acertado) mostrarYaAcertado();
-      else mostrar("pantalla-juego");
+      else {
+        mostrar("pantalla-juego");
+        comprobarPistaFinal();
+      }
       return true;
     } catch (e) {
       console.error(e);
@@ -285,6 +304,7 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
     jugador = null;
     intentos = 0;
     pistasAbiertas = 0;
+    pistaFinal = false;
     acertado = false;
     acertadoEn = null;
     secreto = null;
@@ -361,6 +381,34 @@ import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pi
   $("boton-reintentar").addEventListener("click", () => {
     input.value = "";
     mostrar("pantalla-juego");
+    if (!comprobarPistaFinal()) input.focus();
+  });
+
+  // ---------- Última pista: a los 200 intentos ----------
+  // Se enseña una sola vez a pantalla completa; luego queda en la lista de pistas.
+  function comprobarPistaFinal() {
+    if (!jugador || acertado || pistaFinal || intentos < UMBRAL_PISTA_FINAL || !almacen.obtenerPistaFinal) return false;
+    mostrarPistaFinal();
+    return true;
+  }
+
+  async function mostrarPistaFinal() {
+    const letras = await almacen.obtenerPistaFinal();
+    if (!letras) return;
+    pistaFinal = true;
+    almacen.marcarPistaFinal(jugador);
+    $("pista-final-letras").replaceChildren(...Array.from(letras, (l) => {
+      const span = document.createElement("span");
+      span.textContent = l;
+      return span;
+    }));
+    $("pista-final").hidden = false;
+    lanzarConfeti();
+    pintarPistas();
+  }
+
+  $("boton-pista-final").addEventListener("click", () => {
+    $("pista-final").hidden = true;
     input.focus();
   });
 

@@ -79,6 +79,7 @@
 // de almacen.js, el ranking sigue cargando aunque falte algo nuevo.
   import * as almacen from "../js/almacen.js";
   const MAX_SOSPECHOSO = almacen.MAX_SOSPECHOSO || 3;
+  const pistasUsadas = (j) => (j.pistasAbiertas || 0) + (j.pistaFinal ? 1 : 0);
 
   const TEXTOS = {
     es: {
@@ -244,9 +245,9 @@
     let posicion = 0, anterior = null;
     ganadores.forEach((j, i) => {
       const n = intentosDe(j);
-      const clave = `${j.pistasAbiertas || 0}-${n}`;
+      const clave = `${pistasUsadas(j)}-${n}`;
       if (clave !== anterior) { posicion = i + 1; anterior = clave; }
-      fila($("ganadores"), posicion, j.nombre, n, null, j.pistasAbiertas || 0);
+      fila($("ganadores"), posicion, j.nombre, n, null, pistasUsadas(j));
     });
     if (sospechosos.length) {
       $("bloque-sospechosos").hidden = false;
@@ -265,14 +266,14 @@
     if (activos.length) {
       $("titulo-pendientes").hidden = false;
       $("titulo-pendientes").textContent = T.pendientes;
-      activos.forEach((j) => fila($("pendientes"), null, j.nombre, j.intentos, null, j.pistasAbiertas || 0));
+      activos.forEach((j) => fila($("pendientes"), null, j.nombre, j.intentos, null, pistasUsadas(j)));
     }
     if (rendidos.length) {
       $("bloque-rendidos").hidden = false;
       $("titulo-rendidos").textContent = T.rendidos;
       $("intro-rendidos").textContent = T.introRendidos;
       rendidos.forEach((j) => {
-        fila($("rendidos"), null, j.nombre, j.intentos, "🏳️", j.pistasAbiertas || 0);
+        fila($("rendidos"), null, j.nombre, j.intentos, "🏳️", pistasUsadas(j));
         motivo($("rendidos"), j, T.motivosRendidos);
       });
     }
