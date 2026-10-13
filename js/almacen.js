@@ -40,7 +40,7 @@ const iniciar = (async () => {
       f.connectFirestoreEmulator(db, "localhost", 8080);
     }
     const credencial = await conLimite(auth.signInAnonymously(autenticacion));
-    fb = { db, uid: credencial.user.uid, f };
+    fb = { db, uid: credencial.user.uid, f, usuario: credencial.user };
     return true;
   } catch (e) {
     console.warn("Firebase no disponible, se juega sin guardar en la nube.", e);
@@ -56,6 +56,11 @@ export async function reclamarJugador(nombre, idioma) {
     return await reclamarJugadorUnaVez(nombre, idioma);
   } catch (e) {
     console.warn("Reintentando el registro del jugador", e);
+    // Si Firestore no reconoce la sesión (pasa en algunos navegadores dentro de
+    // apps, como el de WhatsApp en iPhone), pedimos un pase nuevo antes de reintentar.
+    if (e && e.code === "permission-denied" && fb && fb.usuario) {
+      await conLimite(fb.usuario.getIdToken(true)).catch(() => {});
+    }
     return reclamarJugadorUnaVez(nombre, idioma);
   }
 }
