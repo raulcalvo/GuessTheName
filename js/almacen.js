@@ -3,7 +3,7 @@
 import { FIREBASE_CONFIG } from "./firebase-config.js";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
-const TIEMPO_MAXIMO = 8000;
+const TIEMPO_MAXIMO = 15000;
 
 let fb = null; // { db, uid, f } cuando Firebase está disponible
 const yaAcertado = new Set(); // para no cambiar el resultado del ranking si vuelve a acertar
@@ -14,9 +14,12 @@ const conLimite = (promesa) => Promise.race([
 ]);
 
 // "José Pérez" -> "jose-perez"
-export const idJugador = (nombre) =>
-  nombre.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+export const idJugador = (nombre) => {
+  const id = nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     .replace(/[^a-z0-9ñ]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  // Nombres sin letras latinas (otros alfabetos, emojis): usamos sus códigos.
+  return id || ("u-" + Array.from(nombre.trim(), (c) => c.codePointAt(0).toString(36)).join("-")).slice(0, 60);
+};
 
 const iniciar = (async () => {
   if (!FIREBASE_CONFIG) return false;
@@ -28,7 +31,9 @@ const iniciar = (async () => {
     ]));
     const appFb = app.initializeApp(FIREBASE_CONFIG);
     const autenticacion = auth.getAuth(appFb);
-    const db = f.getFirestore(appFb);
+    // Long polling en vez de WebChannel: funciona también dentro de los navegadores
+    // de WhatsApp/Instagram y detrás de redes o bloqueadores que cortan el streaming.
+    const db = f.initializeFirestore(appFb, { experimentalForceLongPolling: true });
     // Solo para pruebas en local: http://localhost:xxxx/?emulador
     if (location.hostname === "localhost" && new URLSearchParams(location.search).has("emulador")) {
       auth.connectAuthEmulator(autenticacion, "http://localhost:9099", { disableWarnings: true });
@@ -47,6 +52,15 @@ export const enLaNube = () => iniciar;
 
 // Devuelve { estado: "nuevo" | "mio" | "ocupado", intentos, acertado }
 export async function reclamarJugador(nombre, idioma) {
+  try {
+    return await reclamarJugadorUnaVez(nombre, idioma);
+  } catch (e) {
+    console.warn("Reintentando el registro del jugador", e);
+    return reclamarJugadorUnaVez(nombre, idioma);
+  }
+}
+
+async function reclamarJugadorUnaVez(nombre, idioma) {
   const id = idJugador(nombre);
   if (!(await iniciar)) return { estado: "mio", intentos: intentosLocales(id), acertado: false };
 

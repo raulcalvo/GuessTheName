@@ -111,7 +111,7 @@ import { reclamarJugador, registrarIntento, consultarNombre } from "./almacen.js
       return true;
     } catch (e) {
       console.error(e);
-      if (!silencioso) $("aviso-jugador").textContent = T("jugadorError");
+      if (!silencioso) $("aviso-jugador").textContent = `${T("jugadorError")} (${e.code || e.message || e})`;
       return false;
     } finally {
       boton.disabled = false;
