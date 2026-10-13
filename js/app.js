@@ -1,4 +1,4 @@
-import { reclamarJugador, registrarIntento, consultarNombre } from "./almacen.js";
+import { reclamarJugador, registrarIntento, consultarNombre, UMBRALES_PISTAS, pistasDesbloqueadas, obtenerPista, abrirPista } from "./almacen.js";
 
 (() => {
   "use strict";
@@ -30,11 +30,53 @@ import { reclamarJugador, registrarIntento, consultarNombre } from "./almacen.js
   let jugador = null;
   try { jugador = localStorage.getItem("jugador"); } catch (e) {}
   let intentos = 0;
+  let pistasAbiertas = 0;
+  let acertado = false;
   const pintarContador = () => {
     $("contador").textContent = intentos === 0 ? ""
       : intentos === 1 ? T("contador1")
       : `${T("contadorN").replace("{n}", intentos)} ${intentos >= 10 ? T("perseverancia") : T("animo")}`;
   };
+
+  // ---------- Pistas ----------
+  const textoPista = (p) => p[idioma] || p.es;
+
+  async function pintarPistas() {
+    const n = pistasDesbloqueadas(intentos);
+    const abiertas = Math.min(pistasAbiertas, n);
+    const pistas = (await Promise.all(Array.from({ length: abiertas }, (_, i) => obtenerPista(i)))).filter(Boolean);
+    const lista = $("lista-pistas");
+    lista.replaceChildren(...pistas.map((p) => {
+      const li = document.createElement("li");
+      li.textContent = textoPista(p);
+      return li;
+    }));
+    // Pistas desbloqueadas pero sin abrir: el jugador decide.
+    const disponibles = acertado ? 0 : n - abiertas;
+    $("ofrecer-pista").hidden = disponibles === 0;
+    if (disponibles) {
+      $("pistas-disponibles").textContent = disponibles === 1 ? T("pistaDisponible1") : T("pistasDisponiblesN").replace("{n}", disponibles);
+      $("boton-abrir-pista").textContent = T("abrirPista").replace("{n}", abiertas + 1);
+    }
+    $("pistas").hidden = pistas.length === 0 && disponibles === 0;
+    const faltan = n < UMBRALES_PISTAS.length ? UMBRALES_PISTAS[n] - intentos : 0;
+    $("proxima-pista").textContent = !jugador || !faltan ? ""
+      : faltan === 1 ? T("proximaPista1") : T("proximaPista").replace("{n}", faltan);
+  }
+
+  $("boton-abrir-pista").addEventListener("click", async () => {
+    const boton = $("boton-abrir-pista");
+    boton.disabled = true;
+    try {
+      await abrirPista(jugador, pistasAbiertas);
+      pistasAbiertas++;
+    } catch (e) {
+      console.error(e);
+    } finally {
+      boton.disabled = false;
+      pintarPistas();
+    }
+  });
 
   function aplicarIdioma(nuevo) {
     idioma = nuevo;
@@ -49,6 +91,7 @@ import { reclamarJugador, registrarIntento, consultarNombre } from "./almacen.js
     $("imagen-sorpresa").alt = T("altImagen");
     document.querySelectorAll("[data-idioma]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.idioma === idioma)));
     pintarContador();
+    pintarPistas();
   }
 
   document.querySelectorAll("[data-idioma]").forEach((b) => b.addEventListener("click", () => {
@@ -105,8 +148,11 @@ import { reclamarJugador, registrarIntento, consultarNombre } from "./almacen.js
       jugador = nombre;
       try { localStorage.setItem("jugador", nombre); } catch (e) {}
       intentos = r.intentos || 0;
+      pistasAbiertas = r.pistasAbiertas || 0;
+      acertado = !!r.acertado;
       $("jugando-como").textContent = T("jugandoComo").replace("{nombre}", jugador);
       pintarContador();
+      pintarPistas();
       mostrar("pantalla-juego");
       return true;
     } catch (e) {
@@ -132,9 +178,12 @@ import { reclamarJugador, registrarIntento, consultarNombre } from "./almacen.js
   $("boton-no-soy-yo").addEventListener("click", () => {
     jugador = null;
     intentos = 0;
+    pistasAbiertas = 0;
+    acertado = false;
     try { localStorage.removeItem("jugador"); } catch (e) {}
     $("jugador").value = "";
     pintarContador();
+    pintarPistas();
     mostrar("pantalla-jugador");
     $("jugador").focus();
   });
@@ -160,7 +209,7 @@ import { reclamarJugador, registrarIntento, consultarNombre } from "./almacen.js
       const primeraPalabra = texto.split(/\s+/)[0];
       const r = await consultarNombre(primeraPalabra !== texto ? [texto, primeraPalabra] : [texto]);
       const acierto = r.acierto;
-      if (acierto) secreto = r.secreto;
+      if (acierto) { secreto = r.secreto; acertado = true; }
       intentos++;
       registrarIntento(jugador, { texto, numero: intentos, acierto, idioma });
 
@@ -176,6 +225,8 @@ import { reclamarJugador, registrarIntento, consultarNombre } from "./almacen.js
         $("titulo-fallo").textContent = azar(T("titulosFallo"));
         document.querySelector("#pantalla-fallo .emoji-grande").textContent = azar(emojisFallo);
         $("texto-fallo").textContent = frase;
+        // ¿Este fallo desbloquea una pista? Se avisa, pero abrirla es decisión del jugador.
+        $("nueva-pista").hidden = !UMBRALES_PISTAS.includes(intentos) || acertado;
         mostrar("pantalla-fallo");
       }
     } catch (e) {
@@ -187,6 +238,7 @@ import { reclamarJugador, registrarIntento, consultarNombre } from "./almacen.js
       botonAdivinar.disabled = false;
       botonAdivinar.textContent = T("adivinar");
       pintarContador();
+      pintarPistas();
     }
   });
 

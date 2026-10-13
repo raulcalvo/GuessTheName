@@ -21,6 +21,10 @@ service cloud.firestore {
       allow get: if request.auth != null;
       allow list, write: if false;
     }
+    match /pistas/{pista} {
+      allow get: if request.auth != null;
+      allow list, write: if false;
+    }
 
     match /jugadores/{id} {
       // Para saber si un nombre ya está cogido y para el ranking.
@@ -36,13 +40,23 @@ service cloud.firestore {
         && request.resource.data.intentos == 0
         && request.resource.data.acertado == false;
 
+      // Cada intento suma uno. Una vez acertado, el resultado del ranking ya no cambia.
       allow update: if request.auth != null
         && resource.data.uid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['intentos', 'acertado', 'acertadoEn', 'acertadoFecha', 'actualizado', 'idioma'])
         && request.resource.data.intentos == resource.data.intentos + 1
-        // Una vez acertado, el resultado del ranking ya no cambia.
         && (!('acertadoEn' in resource.data) || request.resource.data.acertadoEn == resource.data.acertadoEn);
+
+      // Abrir una pista: de una en una, en orden, solo si ya está desbloqueada
+      // (25, 35, 45, 60, 75, 90 y 110 fallos) y antes de acertar.
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && resource.data.acertado == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pistasAbiertas', 'actualizado'])
+        && request.resource.data.pistasAbiertas == resource.data.get('pistasAbiertas', 0) + 1
+        && request.resource.data.pistasAbiertas <= 7
+        && resource.data.intentos >= [25, 35, 45, 60, 75, 90, 110][request.resource.data.pistasAbiertas - 1];
 
       allow delete: if false;
 

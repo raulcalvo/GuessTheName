@@ -62,7 +62,7 @@ export async function reclamarJugador(nombre, idioma) {
 
 async function reclamarJugadorUnaVez(nombre, idioma) {
   const id = idJugador(nombre);
-  if (!(await iniciar)) return { estado: "mio", intentos: intentosLocales(id), acertado: false };
+  if (!(await iniciar)) return { estado: "mio", intentos: intentosLocales(id), acertado: false, pistasAbiertas: 0 };
 
   const { db, uid, f } = fb;
   const ref = f.doc(db, "jugadores", id);
@@ -78,12 +78,12 @@ async function reclamarJugadorUnaVez(nombre, idioma) {
         creado: f.serverTimestamp(),
         actualizado: f.serverTimestamp()
       });
-      return { estado: "nuevo", intentos: 0, acertado: false };
+      return { estado: "nuevo", intentos: 0, acertado: false, pistasAbiertas: 0 };
     }
     const datos = snap.data();
     if (datos.uid !== uid) return { estado: "ocupado" };
     if (datos.acertado) yaAcertado.add(id);
-    return { estado: "mio", intentos: datos.intentos || 0, acertado: !!datos.acertado };
+    return { estado: "mio", intentos: datos.intentos || 0, acertado: !!datos.acertado, pistasAbiertas: datos.pistasAbiertas || 0 };
   }));
 }
 
@@ -117,7 +117,8 @@ function intentosLocales(id) {
 }
 
 // Todos los jugadores con al menos un intento: primero los que han acertado
-// (menos intentos primero; a igualdad, quien acertó antes) y luego los que siguen probando.
+// (menos pistas abiertas primero, luego menos intentos y, a igualdad, quien acertó antes)
+// y luego los que siguen probando.
 export async function obtenerRanking() {
   if (!(await iniciar)) return null;
   const { db, f } = fb;
@@ -125,7 +126,9 @@ export async function obtenerRanking() {
   const ms = (t) => (t && t.toMillis ? t.toMillis() : Infinity);
   const jugadores = snap.docs.map((d) => d.data()).filter((j) => (j.intentos || 0) > 0);
   const ganadores = jugadores.filter((j) => j.acertado)
-    .sort((a, b) => (a.acertadoEn || a.intentos) - (b.acertadoEn || b.intentos) || ms(a.acertadoFecha) - ms(b.acertadoFecha));
+    .sort((a, b) => (a.pistasAbiertas || 0) - (b.pistasAbiertas || 0)
+      || (a.acertadoEn || a.intentos) - (b.acertadoEn || b.intentos)
+      || ms(a.acertadoFecha) - ms(b.acertadoFecha));
   const pendientes = jugadores.filter((j) => !j.acertado)
     .sort((a, b) => a.intentos - b.intentos || ms(a.creado) - ms(b.creado));
   return { ganadores, pendientes };
@@ -156,4 +159,37 @@ export async function consultarNombre(candidatos) {
   const secreto = secretos.find(Boolean);
   if (secreto) return { acierto: true, secreto };
   return { acierto: false, frase: frases.find(Boolean) || null };
+}
+
+// Pistas: se desbloquean al llegar a estos fallos. El texto está en Firestore
+// (pistas/p1…p7, {es, ca, en}) para que el repositorio no dé pistas a nadie.
+export const UMBRALES_PISTAS = [25, 35, 45, 60, 75, 90, 110];
+export const pistasDesbloqueadas = (fallos) => UMBRALES_PISTAS.filter((u) => fallos >= u).length;
+
+// Abre la siguiente pista (siempre en orden) y la apunta en la ficha del jugador.
+export async function abrirPista(nombreJugador, indice) {
+  if (fb) {
+    const { db, f } = fb;
+    await conLimite(f.updateDoc(f.doc(db, "jugadores", idJugador(nombreJugador)), {
+      pistasAbiertas: indice + 1,
+      actualizado: f.serverTimestamp()
+    }));
+  }
+  return obtenerPista(indice);
+}
+
+const pistasLeidas = new Map();
+export async function obtenerPista(indice) {
+  if (pistasLeidas.has(indice)) return pistasLeidas.get(indice);
+  if (!(await iniciar)) return null;
+  const { db, f } = fb;
+  try {
+    const d = await conLimite(f.getDoc(f.doc(db, "pistas", "p" + (indice + 1))));
+    const pista = d.exists() ? d.data() : null;
+    if (pista) pistasLeidas.set(indice, pista);
+    return pista;
+  } catch (e) {
+    console.warn("No se pudo leer la pista", indice + 1, e);
+    return null;
+  }
 }

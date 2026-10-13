@@ -55,6 +55,16 @@
       <button type="submit" id="boton-adivinar" data-i18n="adivinar">¡Adivinar!</button>
     </form>
     <p id="contador" class="contador"></p>
+    <div id="pistas" class="pistas" hidden>
+      <h3 data-i18n="pistasTitulo">🔎 Pistas</h3>
+      <ol id="lista-pistas"></ol>
+      <div id="ofrecer-pista" hidden>
+        <p id="pistas-disponibles" class="disponibles"></p>
+        <p data-i18n="avisoMerito" class="aviso-merito"></p>
+        <button type="button" id="boton-abrir-pista" class="secundario"></button>
+      </div>
+    </div>
+    <p id="proxima-pista" class="contador"></p>
   </section>
 
   <!-- Pantalla 2: fallo -->
@@ -62,6 +72,10 @@
     <div class="emoji-grande" aria-hidden="true">🙈</div>
     <h2 id="titulo-fallo">¡Nooo!</h2>
     <p id="texto-fallo" class="mensaje"></p>
+    <div id="nueva-pista" class="nueva-pista" hidden>
+      <p class="nueva-pista-titulo" data-i18n="nuevaPista">🎁 ¡Nueva pista disponible!</p>
+      <p data-i18n="nuevaPistaTexto"></p>
+    </div>
     <button type="button" id="boton-reintentar" data-i18n="reintentar">Volver a intentarlo</button>
   </section>
 

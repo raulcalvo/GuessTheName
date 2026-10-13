@@ -68,6 +68,7 @@
       nadie: "Todavía nadie lo ha adivinado. ¡El podio está libre!",
       pendientes: "Siguen intentándolo",
       intento: "1 intento", intentos: "{n} intentos",
+      leyendaPistas: "Quien no ha abierto pistas va por delante; 🔎 = pistas abiertas.",
       sinNube: "El ranking no está disponible ahora mismo. Revisa la conexión y vuelve a probar.",
       volver: "← Volver al juego",
       sospechosos: "🕵️ Bajo sospecha",
@@ -89,6 +90,7 @@
       nadie: "Encara ningú l'ha endevinat. El podi és lliure!",
       pendientes: "Continuen intentant-ho",
       intento: "1 intent", intentos: "{n} intents",
+      leyendaPistas: "Qui no ha obert pistes va per davant; 🔎 = pistes obertes.",
       sinNube: "El rànquing no està disponible ara mateix. Revisa la connexió i torna-ho a provar.",
       volver: "← Torna al joc",
       sospechosos: "🕵️ Sota sospita",
@@ -110,6 +112,7 @@
       nadie: "Nobody has guessed it yet. The podium is up for grabs!",
       pendientes: "Still trying",
       intento: "1 attempt", intentos: "{n} attempts",
+      leyendaPistas: "Players who opened no clues rank first; 🔎 = clues opened.",
       sinNube: "The leaderboard isn't available right now. Check your connection and try again.",
       volver: "← Back to the game",
       sospechosos: "🕵️ Under suspicion",
@@ -132,7 +135,7 @@
   document.title = T.titulo;
   const $ = (id) => document.getElementById(id);
   $("titulo").textContent = T.titulo;
-  $("intro").textContent = T.intro;
+  $("intro").textContent = T.intro + " " + T.leyendaPistas;
   $("volver").textContent = T.volver;
   $("estado").textContent = T.cargando;
 
@@ -141,7 +144,7 @@
   const medallas = ["🥇", "🥈", "🥉"];
   const veces = (n) => (n === 1 ? T.intento : T.intentos.replace("{n}", n));
 
-  function fila(lista, posicion, nombre, n, icono) {
+  function fila(lista, posicion, nombre, n, icono, pistas) {
     const li = document.createElement("li");
     if (posicion && posicion <= 3) li.className = "podio-" + posicion;
     const pos = document.createElement("span");
@@ -152,7 +155,7 @@
     quien.textContent = nombre;
     const cuantos = document.createElement("span");
     cuantos.className = "cuantos";
-    cuantos.textContent = veces(n);
+    cuantos.textContent = veces(n) + (pistas ? ` · 🔎${pistas}` : "");
     li.append(pos, quien, cuantos);
     lista.append(li);
   }
@@ -164,12 +167,13 @@
     const sospechosos = r.ganadores.filter((j) => intentosDe(j) <= MAX_SOSPECHOSO);
     const ganadores = r.ganadores.filter((j) => intentosDe(j) > MAX_SOSPECHOSO);
     $("estado").textContent = ganadores.length ? "" : T.nadie;
-    // Empates: misma posición para el mismo número de intentos.
+    // Empates: misma posición para las mismas pistas abiertas e intentos.
     let posicion = 0, anterior = null;
     ganadores.forEach((j, i) => {
       const n = j.acertadoEn || j.intentos;
-      if (n !== anterior) { posicion = i + 1; anterior = n; }
-      fila($("ganadores"), posicion, j.nombre, n);
+      const clave = `${j.pistasAbiertas || 0}-${n}`;
+      if (clave !== anterior) { posicion = i + 1; anterior = clave; }
+      fila($("ganadores"), posicion, j.nombre, n, null, j.pistasAbiertas || 0);
     });
     if (sospechosos.length) {
       $("bloque-sospechosos").hidden = false;
@@ -188,7 +192,7 @@
     if (r.pendientes.length) {
       $("titulo-pendientes").hidden = false;
       $("titulo-pendientes").textContent = T.pendientes;
-      r.pendientes.forEach((j) => fila($("pendientes"), null, j.nombre, j.intentos));
+      r.pendientes.forEach((j) => fila($("pendientes"), null, j.nombre, j.intentos, null, j.pistasAbiertas || 0));
     }
   } catch (e) {
     console.error(e);
