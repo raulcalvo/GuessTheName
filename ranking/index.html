@@ -35,9 +35,13 @@
   .sospechosos .cuantos { color: #7a6cf0; }
   .rendidos {
     margin-top: 24px; padding: 4px 14px 10px;
-    border: 3px dashed #c9c9c9; border-radius: 20px; background: #f4f4f4;
+    border: 3px dashed #9fd0f5; border-radius: 20px; background: #f0f8ff;
   }
-  .rendidos .ranking li { border-color: #e2e2e2; flex-wrap: wrap; opacity: 0.9; }
+  .rendidos .ranking li { border-color: #d6ebfb; flex-wrap: wrap; }
+  .boton-volver-jugar {
+    display: inline-block; margin: 6px 0 8px; padding: 12px 22px; border-radius: 999px;
+    background: var(--boton); color: #fff; font-weight: 700; text-decoration: none;
+  }
   .rendidos .cuantos { color: var(--texto-suave); }
   .rendidos .motivo, .sospechosos .motivo { flex-basis: 100%; margin-left: calc(2.2em + 12px); font-size: 0.9rem; color: var(--texto-suave); }
   .volver { display: inline-block; margin-top: 16px; color: var(--boton); font-weight: 600; }
@@ -68,6 +72,7 @@
       <h2 id="titulo-rendidos" class="seccion"></h2>
       <p id="intro-rendidos" class="intro"></p>
       <ul id="rendidos" class="ranking"></ul>
+      <a id="volver-jugar" class="boton-volver-jugar" href="../"></a>
     </div>
     <a class="volver" id="volver" href="../">← </a>
   </section>
@@ -88,17 +93,18 @@
       cargando: "Consultando el marcador...",
       nadie: "Todavía nadie lo ha adivinado. ¡El podio está libre!",
       pendientes: "Siguen intentándolo",
-      rendidos: "🏳️ Tiraron la toalla",
-      introRendidos: "Empezaron con mucha ilusión, probaron unos cuantos nombres y, a la primera dificultad, desaparecieron. Llevan más de una hora sin dar señales de vida. Son los auténticos perdedores de este juego.",
+      rendidos: "💤 Se tomaron un descanso",
+      introRendidos: "Dejaron la partida a medias, pero aún están a tiempo: el nombre sigue esperando y cada intento cuenta. ¿Te reconoces aquí? Vuelve a jugar, que la gloria no se gana sola.",
+      volverJugar: "🎯 Volver a jugar",
       motivosRendidos: [
-        "Tiene la estantería llena de libros que no pasaron del capítulo dos.",
-        "Seguro que también deja las series a mitad de temporada.",
-        "Su gimnasio le sigue cobrando desde enero.",
-        "Empezó con más ganas que nadie. Lo de terminar ya, si eso, otro día.",
-        "Dijo «ahora vuelvo» y aquí seguimos esperando.",
-        "Tiene un puzle de 1000 piezas con 12 colocadas desde 2019.",
-        "Ni el bebé está tardando tanto en llegar.",
-        "Abandonó antes que los propósitos de Año Nuevo."
+        "Seguro que estaba cogiendo carrerilla. ¡Vuelve, que esto se pone bueno!",
+        "Los grandes oráculos también descansan. Ya toca volver.",
+        "Le falta muy poco… o eso queremos creer. ¡Un intento más!",
+        "Su intuición está recargando batería. ¡Al 100 %, de vuelta al juego!",
+        "Dicen que la inspiración llega cuando menos te lo esperas. Igual es ahora.",
+        "El ranking le guarda el sitio. Solo falta que vuelva a por él.",
+        "Cada nombre descartado es un paso más cerca. ¡A seguir!",
+        "Parar a pensar es de sabios. Volver a jugar, de valientes."
       ],
       intento: "1 intento", intentos: "{n} intentos",
       leyendaPistas: "Manda el número de intentos; 🔎 indica las pistas que abrió cada uno, para que conste.",
@@ -122,17 +128,18 @@
       cargando: "Consultant el marcador...",
       nadie: "Encara ningú l'ha endevinat. El podi és lliure!",
       pendientes: "Continuen intentant-ho",
-      rendidos: "🏳️ Van llençar la tovallola",
-      introRendidos: "Van començar amb molta il·lusió, van provar uns quants noms i, a la primera dificultat, van desaparèixer. Fa més d'una hora que no donen senyals de vida. Són els autèntics perdedors d'aquest joc.",
+      rendidos: "💤 S'han pres un descans",
+      introRendidos: "Van deixar la partida a mitges, però encara són a temps: el nom continua esperant i cada intent compta. T'hi reconeixes? Torna a jugar, que la glòria no es guanya sola.",
+      volverJugar: "🎯 Torna a jugar",
       motivosRendidos: [
-        "Té la prestatgeria plena de llibres que no van passar del capítol dos.",
-        "Segur que també deixa les sèries a mitja temporada.",
-        "El gimnàs encara li cobra des de gener.",
-        "Va començar amb més ganes que ningú. Acabar ja, si de cas, un altre dia.",
-        "Va dir «ara torno» i aquí seguim esperant.",
-        "Té un trencaclosques de 1000 peces amb 12 posades des del 2019.",
-        "Ni el nadó està trigant tant a arribar.",
-        "Ha abandonat abans que els propòsits d'Any Nou."
+        "Segur que estava agafant embranzida. Torna, que això es posa interessant!",
+        "Els grans oracles també descansen. Ja toca tornar.",
+        "Li falta molt poc… o això volem creure. Un intent més!",
+        "La seva intuïció està recarregant bateria. Al 100 %, de tornada al joc!",
+        "Diuen que la inspiració arriba quan menys t'ho esperes. Potser és ara.",
+        "El rànquing li guarda el lloc. Només cal que torni a buscar-lo.",
+        "Cada nom descartat és un pas més a prop. Endavant!",
+        "Aturar-se a pensar és de savis. Tornar a jugar, de valents."
       ],
       intento: "1 intent", intentos: "{n} intents",
       leyendaPistas: "Mana el nombre d'intents; 🔎 indica les pistes que va obrir cadascú, perquè consti.",
@@ -156,17 +163,18 @@
       cargando: "Checking the scoreboard...",
       nadie: "Nobody has guessed it yet. The podium is up for grabs!",
       pendientes: "Still trying",
-      rendidos: "🏳️ Threw in the towel",
-      introRendidos: "They started full of enthusiasm, tried a few names and vanished at the first hurdle. Not a sign of life for over an hour. These are the true losers of this game.",
+      rendidos: "💤 Taking a break",
+      introRendidos: "They left their game halfway, but there's still time: the name is waiting and every attempt counts. Recognise yourself here? Come back and play, glory won't win itself.",
+      volverJugar: "🎯 Back to the game",
       motivosRendidos: [
-        "Their bookshelf is full of books that never made it past chapter two.",
-        "Bet they quit TV series halfway through the season too.",
-        "Their gym has been charging them since January.",
-        "Started keener than anyone. Finishing? Maybe some other day.",
-        "Said \"back in a sec\" and we're still waiting.",
-        "Has had a 1000-piece puzzle with 12 pieces in place since 2019.",
-        "Even the baby is taking less time to arrive.",
-        "Gave up faster than a New Year's resolution."
+        "Probably just taking a run-up. Come back, it's getting good!",
+        "Great oracles need rest too. Time to come back.",
+        "So close… or so we'd like to think. One more try!",
+        "Their intuition is recharging. Back at 100%, back to the game!",
+        "They say inspiration strikes when you least expect it. Maybe it's now.",
+        "The leaderboard is saving their spot. They just need to come back for it.",
+        "Every name ruled out is a step closer. Keep going!",
+        "Pausing to think is wise. Coming back to play is brave."
       ],
       intento: "1 attempt", intentos: "{n} attempts",
       leyendaPistas: "Fewest attempts wins; 🔎 shows how many clues each player opened, just for the record.",
@@ -275,8 +283,9 @@
       $("bloque-rendidos").hidden = false;
       $("titulo-rendidos").textContent = T.rendidos;
       $("intro-rendidos").textContent = T.introRendidos;
+      $("volver-jugar").textContent = T.volverJugar;
       rendidos.forEach((j) => {
-        fila($("rendidos"), null, j.nombre, j.intentos, "🏳️", pistasUsadas(j));
+        fila($("rendidos"), null, j.nombre, j.intentos, "💤", pistasUsadas(j));
         motivo($("rendidos"), j, T.motivosRendidos);
       });
     }
