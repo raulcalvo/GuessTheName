@@ -107,7 +107,7 @@
         "Parar a pensar es de sabios. Volver a jugar, de valientes."
       ],
       intento: "1 intento", intentos: "{n} intentos",
-      leyendaPistas: "Manda el número de intentos; 🔎 indica las pistas que abrió cada uno, para que conste.",
+      leyendaPistas: "Manda el número de intentos y, si hay empate, gana quien abrió menos pistas (🔎).",
       sinNube: "El ranking no está disponible ahora mismo. Revisa la conexión y vuelve a probar.",
       volver: "← Volver al juego",
       sospechosos: "🕵️ Bajo sospecha",
@@ -142,7 +142,7 @@
         "Aturar-se a pensar és de savis. Tornar a jugar, de valents."
       ],
       intento: "1 intent", intentos: "{n} intents",
-      leyendaPistas: "Mana el nombre d'intents; 🔎 indica les pistes que va obrir cadascú, perquè consti.",
+      leyendaPistas: "Mana el nombre d'intents i, si hi ha empat, guanya qui va obrir menys pistes (🔎).",
       sinNube: "El rànquing no està disponible ara mateix. Revisa la connexió i torna-ho a provar.",
       volver: "← Torna al joc",
       sospechosos: "🕵️ Sota sospita",
@@ -177,7 +177,7 @@
         "Pausing to think is wise. Coming back to play is brave."
       ],
       intento: "1 attempt", intentos: "{n} attempts",
-      leyendaPistas: "Fewest attempts wins; 🔎 shows how many clues each player opened, just for the record.",
+      leyendaPistas: "Fewest attempts wins; in a tie, whoever opened fewer clues (🔎) goes first.",
       sinNube: "The leaderboard isn't available right now. Check your connection and try again.",
       volver: "← Back to the game",
       sospechosos: "🕵️ Under suspicion",
@@ -249,15 +249,17 @@
     const sospechosos = r.ganadores.filter((j) => intentosDe(j) <= MAX_SOSPECHOSO);
     const ganadores = r.ganadores.filter((j) => intentosDe(j) > MAX_SOSPECHOSO);
     $("estado").textContent = ganadores.length ? "" : T.nadie;
-    // Solo cuentan los intentos (las pistas se muestran a título informativo).
+    // Primero los intentos; a igualdad, menos pistas usadas.
     // Se ordena aquí también por si el navegador tiene una versión vieja de almacen.js.
     const ms = (t) => (t && t.toMillis ? t.toMillis() : Infinity);
-    ganadores.sort((a, b) => intentosDe(a) - intentosDe(b) || ms(a.acertadoFecha) - ms(b.acertadoFecha));
-    // Empates: misma posición para el mismo número de intentos.
+    ganadores.sort((a, b) => intentosDe(a) - intentosDe(b) || pistasUsadas(a) - pistasUsadas(b)
+      || ms(a.acertadoFecha) - ms(b.acertadoFecha));
+    // Empates: misma posición para los mismos intentos y pistas.
     let posicion = 0, anterior = null;
     ganadores.forEach((j, i) => {
       const n = intentosDe(j);
-      if (n !== anterior) { posicion = i + 1; anterior = n; }
+      const clave = `${n}-${pistasUsadas(j)}`;
+      if (clave !== anterior) { posicion = i + 1; anterior = clave; }
       fila($("ganadores"), posicion, j.nombre, n, null, pistasUsadas(j));
     });
     if (sospechosos.length) {

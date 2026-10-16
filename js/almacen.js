@@ -128,7 +128,7 @@ function intentosLocales(id) {
 }
 
 // Todos los jugadores con al menos un intento: primero los que han acertado
-// (menos intentos primero y, a igualdad, quien acertó antes; las pistas son solo informativas)
+// (menos intentos primero; a igualdad, menos pistas y luego quien acertó antes)
 // y luego los que siguen probando.
 // Pistas que se muestran en el ranking: las abiertas más la última, si la vio.
 export const pistasUsadas = (j) => (j.pistasAbiertas || 0) + (j.pistaFinal ? 1 : 0);
@@ -156,6 +156,7 @@ function ordenarRanking(snap) {
   const jugadores = snap.docs.map((d) => d.data()).filter((j) => (j.intentos || 0) > 0);
   const ganadores = jugadores.filter((j) => j.acertado)
     .sort((a, b) => (a.acertadoEn || a.intentos) - (b.acertadoEn || b.intentos)
+      || pistasUsadas(a) - pistasUsadas(b)
       || ms(a.acertadoFecha) - ms(b.acertadoFecha));
   const pendientes = jugadores.filter((j) => !j.acertado)
     .sort((a, b) => a.intentos - b.intentos || ms(a.creado) - ms(b.creado));
